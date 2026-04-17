@@ -19,14 +19,9 @@ export default function GameControl() {
   const [confetti, setConfetti] = useState(false);
   const lastBingoIdRef = useRef<string | null>(null);
 
-  const theme = code
-    ? themes.find((t) =>
-        t.id === (JSON.parse(localStorage.getItem('bingolive_host_code') ?? '{}')?.themeId ?? ''))
-    : null;
-
   const { session, players, sortedPlayers, loading } = useGameState(
     code ?? '',
-    theme ?? null
+    null
   );
 
   const themeResolved = session
