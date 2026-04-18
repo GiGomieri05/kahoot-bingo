@@ -4,6 +4,7 @@ import { get, ref } from 'firebase/database';
 import { db } from '../../firebase';
 import { useThemes } from '../../hooks/useThemes';
 import { joinSession } from '../../hooks/useSession';
+import { containsBadWord } from '../../utils/filterName';
 
 export default function JoinSession() {
   const { code: paramCode } = useParams<{ code?: string }>();
@@ -22,6 +23,7 @@ export default function JoinSession() {
     const trimName = name.trim();
     if (trimCode.length !== 6) { triggerError('Enter a valid 6-character code.'); return; }
     if (!trimName) { triggerError('Please enter your name.'); return; }
+    if (containsBadWord(trimName)) { triggerError('Nome inválido. Por favor, escolha outro nome.'); return; }
     setLoading(true);
     try {
       const snap = await get(ref(db, `sessions/${trimCode}`));

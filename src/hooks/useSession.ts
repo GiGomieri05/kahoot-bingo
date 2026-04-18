@@ -168,6 +168,10 @@ export async function deleteSession(code: string): Promise<void> {
   await remove(ref(db, `sessions/${code}`));
 }
 
+export async function kickPlayer(code: string, playerId: string): Promise<void> {
+  await remove(ref(db, `sessions/${code}/players/${playerId}`));
+}
+
 export async function declareBingo(
   code: string,
   playerId: string

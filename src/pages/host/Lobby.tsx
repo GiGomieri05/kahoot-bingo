@@ -4,6 +4,7 @@ import { useThemes } from '../../hooks/useThemes';
 import { usePlayersListener, createSession, updateSessionStatus } from '../../hooks/useSession';
 import QRCodeDisplay from '../../components/QRCodeDisplay';
 import { playJoin } from '../../components/SoundEffects';
+import ModerationPanel from '../../components/ModerationPanel';
 
 export default function Lobby() {
   const { themeId } = useParams<{ themeId: string }>();
@@ -67,6 +68,13 @@ export default function Lobby() {
       >
         ← Back
       </button>
+
+      {/* Moderation */}
+      {sessionCode && (
+        <div style={{ position: 'absolute', top: 20, right: 20 }}>
+          <ModerationPanel code={sessionCode} players={players} />
+        </div>
+      )}
 
       {!sessionCode ? (
         <p style={{ color: '#8A89A0', fontSize: 20, fontWeight: 700 }}>Creating session...</p>
