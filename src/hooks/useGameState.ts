@@ -33,6 +33,9 @@ export function useGameState(code: string, theme: Theme | null) {
       ? session.calledItems
       : Object.values(session.calledItems ?? {});
     const calledSet = new Set(calledItems);
+    const sessionWonTypes: string[] = Array.isArray(session.wonTypes)
+      ? session.wonTypes
+      : Object.values(session.wonTypes ?? {});
 
     return players
       .filter((p) => !p.wonTypes?.includes('full'))
@@ -41,7 +44,8 @@ export function useGameState(code: string, theme: Theme | null) {
         const allMarked: number[] = Array.isArray(p.marked) ? p.marked : Object.values(p.marked ?? {});
         const marked = allMarked.filter((idx) => calledSet.has(idx));
         const playerWonTypes: string[] = Array.isArray(p.wonTypes) ? p.wonTypes : Object.values(p.wonTypes ?? {});
-        const nearType = checkNearBingo(board, marked, calledItems, playerWonTypes);
+        const alreadyWon = Array.from(new Set([...playerWonTypes, ...sessionWonTypes]));
+        const nearType = checkNearBingo(board, marked, calledItems, alreadyWon);
         return nearType ? [{ player: p, nearType }] : [];
       });
   }, [players, session]);
