@@ -99,6 +99,7 @@ export async function joinSession(code: string, playerName: string, theme: Theme
     marked: [],
     score: 0,
     bingo: false,
+    wonTypes: [],
     joinedAt: Date.now(),
   });
   return newPlayerRef.key;
@@ -197,7 +198,8 @@ export async function declareBingo(
   const board: number[] = toArray(playerData.board);
   const marked: number[] = toArray(playerData.marked);
   const calledItems: number[] = toArray(sessionData.calledItems);
-  const wonTypes: string[] = Array.isArray(sessionData.wonTypes) ? sessionData.wonTypes : Object.values(sessionData.wonTypes ?? {});
+  const sessionWonTypes: string[] = Array.isArray(sessionData.wonTypes) ? sessionData.wonTypes : Object.values(sessionData.wonTypes ?? {});
+  const playerWonTypes: string[] = Array.isArray(playerData.wonTypes) ? playerData.wonTypes : Object.values(playerData.wonTypes ?? {});
   const pendingBingos: { playerId: string; playerName: string; bingoType: string; points: number }[] =
     Array.isArray(sessionData.pendingBingos) ? sessionData.pendingBingos : Object.values(sessionData.pendingBingos ?? {});
 
@@ -209,13 +211,14 @@ export async function declareBingo(
 
   console.log('[declareBingo] validMarked:', validMarked);
 
-  const result = checkBingo(board, validMarked);
+  const result = checkBingo(board, validMarked, playerWonTypes);
   console.log('[declareBingo] result:', result);
   if (!result.type) return { success: false, reason: 'invalid' };
-  if (wonTypes.includes(result.type)) return { success: false, reason: 'already_won' };
-  if (pendingBingos.some((p) => p.playerId === playerId)) return { success: false, reason: 'already_pending' };
+  if (playerWonTypes.includes(result.type)) return { success: false, reason: 'already_won' };
+  if (pendingBingos.some((p) => p.playerId === playerId && p.bingoType === result.type)) return { success: false, reason: 'already_pending' };
 
   const newScore = (playerData.score ?? 0) + result.points;
+  const newPlayerWonTypes = [...playerWonTypes, result.type];
   const newPending = [
     ...pendingBingos,
     { playerId, playerName: playerData.name, bingoType: result.type, points: result.points },
@@ -225,10 +228,11 @@ export async function declareBingo(
     update(ref(db, `sessions/${code}/players/${playerId}`), {
       bingo: true,
       bingoType: result.type,
+      wonTypes: newPlayerWonTypes,
       score: newScore,
     }),
     update(ref(db, `sessions/${code}`), {
-      wonTypes: [...wonTypes, result.type],
+      wonTypes: [...sessionWonTypes, result.type],
       pendingBingos: newPending,
       status: result.type === 'full' ? 'finished' : 'bingo_pending',
     }),

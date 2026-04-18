@@ -52,7 +52,7 @@ export default function BingoBoard() {
     const unsub = onValue(dbRef(db, `sessions/${code}/players/${playerId}`), (snap) => {
       if (snap.exists()) {
         const v = snap.val();
-        setPlayer({ id: playerId, ...v, board: v.board ?? [], marked: v.marked ?? [] } as Player);
+        setPlayer({ id: playerId, ...v, board: v.board ?? [], marked: v.marked ?? [], wonTypes: v.wonTypes ?? [] } as Player);
       }
     });
     return () => unsub();
@@ -120,10 +120,10 @@ export default function BingoBoard() {
     );
   }
 
-  const bingoResult = checkBingo(player.board, player.marked);
+  const playerWonTypes = player.wonTypes ?? [];
+  const bingoResult = checkBingo(player.board, player.marked, playerWonTypes);
   const hasBingo = bingoResult.type !== null;
-  const wonTypes = session?.wonTypes ?? [];
-  const typeAlreadyWon = bingoResult.type ? wonTypes.includes(bingoResult.type) : false;
+  const typeAlreadyWon = bingoResult.type ? playerWonTypes.includes(bingoResult.type) : false;
   const calledCount = session?.calledItems?.length ?? 0;
   const totalItems = theme.items.length;
 
