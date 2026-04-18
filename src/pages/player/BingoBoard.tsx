@@ -121,9 +121,11 @@ export default function BingoBoard() {
   }
 
   const playerWonTypes = player.wonTypes ?? [];
-  const bingoResult = checkBingo(player.board, player.marked, playerWonTypes);
+  const sessionWonTypes = session?.wonTypes ?? [];
+  const allClosedTypes = Array.from(new Set([...playerWonTypes, ...sessionWonTypes]));
+  const bingoResult = checkBingo(player.board, player.marked, allClosedTypes);
   const hasBingo = bingoResult.type !== null;
-  const typeAlreadyWon = bingoResult.type ? playerWonTypes.includes(bingoResult.type) : false;
+  const showBingoButton = hasBingo && !bingoDeclared;
   const calledCount = session?.calledItems?.length ?? 0;
   const totalItems = theme.items.length;
 
@@ -233,7 +235,7 @@ export default function BingoBoard() {
       </div>
 
       {/* Bingo Button */}
-      {hasBingo && !bingoDeclared && !typeAlreadyWon && (
+      {showBingoButton && (
         <button
           onClick={handleDeclareBingo}
           className="btn-3d animate-pulse-glow"
@@ -253,16 +255,6 @@ export default function BingoBoard() {
         >
           🎉 BINGO! {bingoResult.type === 'full' ? '(Cartela Cheia +100pts)' : bingoResult.type === 'corners' ? '(4 Cantos +25pts)' : '(Fileira +50pts)'}
         </button>
-      )}
-
-      {hasBingo && typeAlreadyWon && !bingoDeclared && (
-        <div style={{
-          background: '#FF4B4B22', border: '2px solid #FF4B4B55',
-          borderRadius: 16, padding: '16px 24px',
-          textAlign: 'center', color: '#FF4B4B', fontWeight: 800, fontSize: 15,
-        }}>
-          ⚠️ Você já conquistou este tipo de bingo. Continue marcando!
-        </div>
       )}
 
       {bingoError && (
