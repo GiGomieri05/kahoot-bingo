@@ -106,7 +106,7 @@ export default function BingoBoard() {
       setConfetti(true);
       setTimeout(() => setConfetti(false), 5000);
     } else if (result.reason === 'already_won') {
-      setBingoError('Este tipo de bingo já foi conquistado por outro jogador!');
+      setBingoError('Você já conquistou este tipo de bingo!');
     } else if (result.reason === 'invalid') {
       setBingoError('Seu bingo não é válido. Continue marcando!');
     }
@@ -261,7 +261,7 @@ export default function BingoBoard() {
           borderRadius: 16, padding: '16px 24px',
           textAlign: 'center', color: '#FF4B4B', fontWeight: 800, fontSize: 15,
         }}>
-          ⚠️ Este tipo de bingo já foi conquistado. Continue marcando!
+          ⚠️ Você já conquistou este tipo de bingo. Continue marcando!
         </div>
       )}
 
