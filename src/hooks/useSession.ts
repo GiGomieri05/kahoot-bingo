@@ -127,13 +127,18 @@ export async function markItem(
   itemIndex: number,
   currentScore: number
 ): Promise<void> {
-  const snap = await get(ref(db, `sessions/${code}/players/${playerId}/marked`));
-  const current: number[] = snap.val() ?? [];
+  const [markedSnap, calledSnap] = await Promise.all([
+    get(ref(db, `sessions/${code}/players/${playerId}/marked`)),
+    get(ref(db, `sessions/${code}/calledItems`)),
+  ]);
+  const current: number[] = markedSnap.val() ?? [];
   if (current.includes(itemIndex)) return;
+  const calledItems: number[] = calledSnap.val() ?? [];
+  const wasCalled = calledItems.includes(itemIndex);
   const updated = [...current, itemIndex];
   await update(ref(db, `sessions/${code}/players/${playerId}`), {
     marked: updated,
-    score: currentScore + 10,
+    score: wasCalled ? currentScore + 10 : currentScore,
   });
 }
 
@@ -143,13 +148,18 @@ export async function unmarkItem(
   itemIndex: number,
   currentScore: number
 ): Promise<void> {
-  const snap = await get(ref(db, `sessions/${code}/players/${playerId}/marked`));
-  const current: number[] = snap.val() ?? [];
+  const [markedSnap, calledSnap] = await Promise.all([
+    get(ref(db, `sessions/${code}/players/${playerId}/marked`)),
+    get(ref(db, `sessions/${code}/calledItems`)),
+  ]);
+  const current: number[] = markedSnap.val() ?? [];
   if (!current.includes(itemIndex)) return;
+  const calledItems: number[] = calledSnap.val() ?? [];
+  const wasCalled = calledItems.includes(itemIndex);
   const updated = current.filter((i) => i !== itemIndex);
   await update(ref(db, `sessions/${code}/players/${playerId}`), {
     marked: updated,
-    score: Math.max(0, currentScore - 10),
+    score: wasCalled ? Math.max(0, currentScore - 10) : currentScore,
   });
 }
 
