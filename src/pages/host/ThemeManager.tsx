@@ -68,8 +68,9 @@ const inputStyle: React.CSSProperties = {
 
 export default function ThemeManager() {
   const navigate = useNavigate();
-  const { themes, loading, createTheme, deleteTheme, seedDefaultThemes } = useThemes();
+  const { themes, loading, createTheme, deleteTheme, seedDefaultThemes, updateTheme } = useThemes();
   const [showForm, setShowForm] = useState(false);
+  const [editingTheme, setEditingTheme] = useState<Theme | null>(null);
   const [formName, setFormName] = useState('');
   const [formDesc, setFormDesc] = useState('');
   const [formItems, setFormItems] = useState<ThemeItem[]>([
@@ -88,18 +89,37 @@ export default function ThemeManager() {
     setFormItems((prev) => prev.filter((_, idx) => idx !== i));
   }
 
+  function handleOpenEdit(theme: Theme) {
+    setEditingTheme(theme);
+    setFormName(theme.name);
+    setFormDesc(theme.description ?? '');
+    setFormItems(theme.items.map((it) => ({ ...it })));
+    setError('');
+    setShowForm(true);
+  }
+
+  function handleCloseForm() {
+    setShowForm(false);
+    setEditingTheme(null);
+    setFormName('');
+    setFormDesc('');
+    setFormItems(Array(16).fill(null).map(() => ({ ...EMPTY_ITEM })));
+    setError('');
+  }
+
   async function handleSave() {
     setError('');
     const filled = formItems.filter((it) => it.word.trim() && it.clue.trim());
     if (!formName.trim()) { setError('Theme name is required.'); return; }
     if (filled.length < 16) { setError('You need at least 16 filled items.'); return; }
     setSaving(true);
-    await createTheme({ name: formName, description: formDesc, items: filled, createdAt: Date.now() });
+    if (editingTheme) {
+      await updateTheme(editingTheme.id, filled, formName, formDesc);
+    } else {
+      await createTheme({ name: formName, description: formDesc, items: filled, createdAt: Date.now() });
+    }
     setSaving(false);
-    setShowForm(false);
-    setFormName('');
-    setFormDesc('');
-    setFormItems(Array(16).fill(null).map(() => ({ ...EMPTY_ITEM })));
+    handleCloseForm();
   }
 
   async function handleSeed() {
@@ -149,7 +169,7 @@ export default function ThemeManager() {
             </button>
           )}
           <button
-            onClick={() => setShowForm(true)}
+            onClick={() => { setEditingTheme(null); setShowForm(true); }}
             className="btn-3d"
             style={{
               background: '#1CB0F6',
@@ -225,6 +245,21 @@ export default function ThemeManager() {
                   ▶ Start Session
                 </button>
                 <button
+                  onClick={() => handleOpenEdit(theme)}
+                  style={{
+                    background: '#FFC80022',
+                    border: '1px solid #FFC80055',
+                    color: '#FFC800',
+                    borderRadius: 10,
+                    padding: '10px 14px',
+                    fontWeight: 800,
+                    fontSize: 14,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ✏️
+                </button>
+                <button
                   onClick={() => deleteTheme(theme.id)}
                   style={{
                     background: '#FF4B4B22',
@@ -253,10 +288,10 @@ export default function ThemeManager() {
           }}>
             <div className="card animate-fade-scale" style={{ width: '100%', maxWidth: 680, padding: 32 }}>
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24 }}>
-                <h2 style={{ margin: 0, fontWeight: 900, fontSize: 24, color: '#E8E6F0' }}>Create New Theme</h2>
+                <h2 style={{ margin: 0, fontWeight: 900, fontSize: 24, color: '#E8E6F0' }}>{editingTheme ? '✏️ Edit Theme' : 'Create New Theme'}</h2>
                 <div style={{ flex: 1 }} />
                 <button
-                  onClick={() => setShowForm(false)}
+                  onClick={handleCloseForm}
                   style={{ background: 'none', border: 'none', color: '#8A89A0', cursor: 'pointer', fontSize: 24 }}
                 >
                   ×
@@ -345,7 +380,7 @@ export default function ThemeManager() {
                   fontFamily: 'Nunito, sans-serif',
                 }}
               >
-                {saving ? 'Saving...' : '💾 Save Theme'}
+                {saving ? 'Saving...' : editingTheme ? '💾 Save Changes' : '💾 Save Theme'}
               </button>
             </div>
           </div>
