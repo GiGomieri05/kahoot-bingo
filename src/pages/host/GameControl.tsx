@@ -14,6 +14,7 @@ export default function GameControl() {
   const { themes } = useThemes();
   const [isRevealed, setIsRevealed] = useState(false);
   const [confetti, setConfetti] = useState(false);
+  const [showCalledWords, setShowCalledWords] = useState(false);
   const lastWonTypesLenRef = useRef<number>(0);
 
   const { session, players, sortedPlayers, loading } = useGameState(
@@ -53,6 +54,7 @@ export default function GameControl() {
     const pick = available[Math.floor(Math.random() * available.length)];
     await callNextItem(code, pick);
     setIsRevealed(false);
+    setShowCalledWords(false);
     playReveal();
   }
 
@@ -136,6 +138,7 @@ export default function GameControl() {
           {/* Main area */}
           <div>
             <ClueDisplay
+              key={resolvedClue?.word}
               clue={resolvedClue}
               isRevealed={isRevealed}
               onReveal={handleReveal}
@@ -156,12 +159,25 @@ export default function GameControl() {
               </button>
             </div>
 
-            {/* Called items pills - only show last 5 */}
+            {/* Called items pills - only show last 8 */}
             {session && session.calledItems.length > 0 && themeResolved && (
               <div style={{ marginTop: 24 }}>
-                <p style={{ color: '#8A89A0', fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-                  Últimas chamadas ({session.calledItems.length}/{themeResolved.items.length})
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <p style={{ color: '#8A89A0', fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, margin: 0 }}>
+                    Últimas chamadas ({session.calledItems.length}/{themeResolved.items.length})
+                  </p>
+                  <button
+                    onClick={() => setShowCalledWords(v => !v)}
+                    style={{
+                      background: '#2A2F5288', border: '1px solid #3a4066',
+                      color: '#8A89A0', cursor: 'pointer',
+                      fontSize: 11, fontWeight: 700, fontFamily: 'Nunito, sans-serif',
+                      padding: '2px 8px', borderRadius: 6,
+                    }}
+                  >
+                    {showCalledWords ? '🙈 Ocultar' : '👁️ Mostrar'}
+                  </button>
+                </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {[...session.calledItems].slice(-8).reverse().map((idx, i) => (
                     <span
@@ -172,6 +188,9 @@ export default function GameControl() {
                         borderRadius: 8, padding: '4px 10px',
                         color: i === 0 ? '#1CB0F6' : '#8A89A0',
                         fontSize: 12, fontWeight: 700,
+                        filter: showCalledWords ? 'none' : 'blur(4px)',
+                        userSelect: showCalledWords ? 'auto' : 'none',
+                        transition: 'filter 0.2s',
                       }}
                     >
                       {themeResolved.items[idx]?.word}

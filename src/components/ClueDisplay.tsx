@@ -35,6 +35,10 @@ export default function ClueDisplay({ clue, isRevealed, onReveal, large }: ClueD
     onReveal?.();
   }
 
+  function handleHide() {
+    setFlipped(false);
+  }
+
   return (
     <div style={{ textAlign: 'center' }}>
       <div
@@ -64,22 +68,35 @@ export default function ClueDisplay({ clue, isRevealed, onReveal, large }: ClueD
       </div>
 
       {isRevealed || flipped ? (
-        <div
-          className="animate-pop-in"
-          style={{
-            padding: large ? '28px 32px' : '16px 20px',
-            borderRadius: 16,
-            background: 'linear-gradient(135deg, #0d1f0d, #1a3a1a)',
-            border: '2px solid #58CC02',
-            boxShadow: '0 0 20px 4px rgba(88,204,2,0.2)',
-          }}
-        >
-          <div style={{ color: '#8A89A0', fontSize: large ? 14 : 12, fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 2 }}>
-            ANSWER
+        <div style={{ position: 'relative' }}>
+          <div
+            className="animate-pop-in"
+            style={{
+              padding: large ? '28px 32px' : '16px 20px',
+              borderRadius: 16,
+              background: 'linear-gradient(135deg, #0d1f0d, #1a3a1a)',
+              border: '2px solid #58CC02',
+              boxShadow: '0 0 20px 4px rgba(88,204,2,0.2)',
+            }}
+          >
+            <div style={{ color: '#8A89A0', fontSize: large ? 14 : 12, fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 2 }}>
+              ANSWER
+            </div>
+            <div style={{ color: '#58CC02', fontSize: large ? 48 : 28, fontWeight: 900 }}>
+              {clue.word}
+            </div>
           </div>
-          <div style={{ color: '#58CC02', fontSize: large ? 48 : 28, fontWeight: 900 }}>
-            {clue.word}
-          </div>
+          <button
+            onClick={handleHide}
+            style={{
+              position: 'absolute', top: 10, right: 12,
+              background: 'none', border: 'none',
+              color: '#8A89A0', cursor: 'pointer',
+              fontSize: 12, fontWeight: 700, fontFamily: 'Nunito, sans-serif',
+            }}
+          >
+            🙈 Ocultar
+          </button>
         </div>
       ) : (
         <button
