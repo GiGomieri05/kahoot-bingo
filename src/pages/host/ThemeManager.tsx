@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useThemes } from '../../hooks/useThemes';
+import * as XLSX from 'xlsx';
 import type { Theme, ThemeItem } from '../../types';
 
 const EMPTY_ITEM: ThemeItem = { word: '', clue: '' };
@@ -84,9 +85,49 @@ export default function ThemeManager() {
     setFormItems((prev) => prev.map((item, idx) => idx === i ? { ...item, [field]: val } : item));
   }
 
+  const MAX_ITEMS = 100;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   function handleItemRemove(i: number) {
     if (formItems.length <= 16) return;
     setFormItems((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
+  function handleAdd16() {
+    setFormItems((prev) => {
+      const slots = MAX_ITEMS - prev.length;
+      if (slots <= 0) return prev;
+      const count = Math.min(16, slots);
+      return [...prev, ...Array(count).fill(null).map(() => ({ ...EMPTY_ITEM }))];
+    });
+  }
+
+  function handleImportExcel(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows: string[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        const imported: ThemeItem[] = rows
+          .filter((row) => row[0] && row[1])
+          .map((row) => ({ word: String(row[0]).trim(), clue: String(row[1]).trim() }))
+          .slice(0, MAX_ITEMS);
+        if (imported.length === 0) {
+          setError('Planilha vazia ou formato inválido. Use colunas: Palavra | Dica');
+          return;
+        }
+        setFormItems(imported);
+        setError('');
+      } catch {
+        setError('Erro ao ler o arquivo. Certifique-se que é um .xlsx ou .csv válido.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
   }
 
   function handleOpenEdit(theme: Theme) {
@@ -322,10 +363,27 @@ export default function ThemeManager() {
                 />
               </div>
 
-              <div style={{ marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <label style={{ color: '#8A89A0', fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1 }}>
-                  Items ({formItems.length}) — minimum 16
+                  Items ({formItems.length}/100) — minimum 16
                 </label>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    background: '#58CC0222', border: '1px solid #58CC0255',
+                    color: '#58CC02', borderRadius: 8, padding: '4px 12px',
+                    fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'Nunito, sans-serif',
+                  }}
+                >
+                  📥 Importar Excel
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  style={{ display: 'none' }}
+                  onChange={handleImportExcel}
+                />
               </div>
 
               <div style={{ maxHeight: 360, overflowY: 'auto', marginBottom: 16, paddingRight: 4 }}>
@@ -340,23 +398,32 @@ export default function ThemeManager() {
                 ))}
               </div>
 
-              <button
-                onClick={() => setFormItems((prev) => [...prev, { ...EMPTY_ITEM }])}
-                style={{
-                  background: '#2A2F52',
-                  border: '1px solid #3a4066',
-                  color: '#8A89A0',
-                  borderRadius: 10,
-                  padding: '8px 16px',
-                  cursor: 'pointer',
-                  fontWeight: 700,
-                  fontSize: 14,
-                  marginBottom: 20,
-                  fontFamily: 'Nunito, sans-serif',
-                }}
-              >
-                + Add Item
-              </button>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+                <button
+                  onClick={() => formItems.length < MAX_ITEMS && setFormItems((prev) => [...prev, { ...EMPTY_ITEM }])}
+                  disabled={formItems.length >= MAX_ITEMS}
+                  style={{
+                    background: '#2A2F52', border: '1px solid #3a4066',
+                    color: formItems.length >= MAX_ITEMS ? '#3a4066' : '#8A89A0',
+                    borderRadius: 10, padding: '8px 16px', cursor: formItems.length >= MAX_ITEMS ? 'not-allowed' : 'pointer',
+                    fontWeight: 700, fontSize: 14, fontFamily: 'Nunito, sans-serif',
+                  }}
+                >
+                  + Add Item
+                </button>
+                <button
+                  onClick={handleAdd16}
+                  disabled={formItems.length >= MAX_ITEMS}
+                  style={{
+                    background: '#1CB0F622', border: '1px solid #1CB0F655',
+                    color: formItems.length >= MAX_ITEMS ? '#3a4066' : '#1CB0F6',
+                    borderRadius: 10, padding: '8px 16px', cursor: formItems.length >= MAX_ITEMS ? 'not-allowed' : 'pointer',
+                    fontWeight: 700, fontSize: 14, fontFamily: 'Nunito, sans-serif',
+                  }}
+                >
+                  + 16 Items
+                </button>
+              </div>
 
               {error && (
                 <p style={{ color: '#FF4B4B', fontWeight: 700, marginBottom: 12 }}>{error}</p>
