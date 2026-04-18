@@ -53,14 +53,18 @@ export default function GameControl() {
       .filter((i) => !session.calledItems.includes(i));
     if (available.length === 0) return;
     const pick = available[Math.floor(Math.random() * available.length)];
-    await callNextItem(code, pick);
     setIsRevealed(false);
     setShowCalledWords(false);
+    await callNextItem(code, pick);
     playReveal();
   }
 
   function handleReveal() {
     setIsRevealed(true);
+  }
+
+  function handleHide() {
+    setIsRevealed(false);
   }
 
   async function handleEndGame() {
@@ -188,10 +192,11 @@ export default function GameControl() {
           {/* Main area */}
           <div>
             <ClueDisplay
-              key={resolvedClue?.word}
+              key={session?.currentClueIndex ?? -1}
               clue={resolvedClue}
               isRevealed={isRevealed}
               onReveal={handleReveal}
+              onHide={handleHide}
               large
             />
 

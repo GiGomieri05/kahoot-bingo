@@ -1,15 +1,14 @@
-import { useState } from 'react';
 import type { ThemeItem } from '../types';
 
 interface ClueDisplayProps {
   clue: ThemeItem | null;
   isRevealed: boolean;
   onReveal?: () => void;
+  onHide?: () => void;
   large?: boolean;
 }
 
-export default function ClueDisplay({ clue, isRevealed, onReveal, large }: ClueDisplayProps) {
-  const [flipped, setFlipped] = useState(false);
+export default function ClueDisplay({ clue, isRevealed, onReveal, onHide, large }: ClueDisplayProps) {
 
   if (!clue) {
     return (
@@ -31,12 +30,11 @@ export default function ClueDisplay({ clue, isRevealed, onReveal, large }: ClueD
   }
 
   function handleReveal() {
-    setFlipped(true);
     onReveal?.();
   }
 
   function handleHide() {
-    setFlipped(false);
+    onHide?.();
   }
 
   return (
@@ -67,7 +65,7 @@ export default function ClueDisplay({ clue, isRevealed, onReveal, large }: ClueD
         </div>
       </div>
 
-      {isRevealed || flipped ? (
+      {isRevealed ? (
         <div style={{ position: 'relative' }}>
           <div
             className="animate-pop-in"
