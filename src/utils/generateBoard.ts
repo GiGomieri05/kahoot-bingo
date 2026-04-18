@@ -6,5 +6,6 @@ export function generateBoard(items: ThemeItem[]): number[] {
     const j = Math.floor(Math.random() * (i + 1));
     [indices[i], indices[j]] = [indices[j], indices[i]];
   }
-  return indices.slice(0, 16);
+  const size = Math.min(16, indices.length);
+  return indices.slice(0, size);
 }

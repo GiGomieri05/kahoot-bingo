@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSessionListener, usePlayersListener } from '../../hooks/useSession';
 import { useThemes } from '../../hooks/useThemes';
@@ -6,20 +6,21 @@ import { useThemes } from '../../hooks/useThemes';
 export default function WaitingRoom() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
-  const { session } = useSessionListener(code ?? '');
+  const { session, loading } = useSessionListener(code ?? '');
   const { players } = usePlayersListener(code ?? '');
   const { themes } = useThemes();
   const myName = localStorage.getItem('bingolive_player_name') ?? '';
   const theme = session ? themes.find((t) => t.id === session.themeId) : null;
+  const sessionWasLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (session?.status === 'playing') {
-      navigate(`/board/${code}`);
+    if (!loading && session) sessionWasLoadedRef.current = true;
+    if (!loading && !session && sessionWasLoadedRef.current) {
+      navigate('/');
     }
-    if (session?.status === 'finished') {
-      navigate(`/player-results/${code}`);
-    }
-  }, [session?.status, code, navigate]);
+    if (session?.status === 'playing') navigate(`/board/${code}`);
+    if (session?.status === 'finished') navigate(`/player-results/${code}`);
+  }, [session, loading, code, navigate]);
 
   const BADGE_COLORS = ['#1CB0F6','#CE82FF','#58CC02','#FFC800','#FF86C8','#FF9600'];
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ref as dbRef, get, onValue } from 'firebase/database';
 import { db } from '../../firebase';
@@ -19,6 +19,7 @@ export default function BingoBoard() {
   const [cellAnim, setCellAnim] = useState<number | null>(null);
   const [bingoDeclared, setBingoDeclared] = useState(false);
   const [bingoError, setBingoError] = useState<string | null>(null);
+  const sessionWasLoadedRef = useRef(false);
 
   const playerId = localStorage.getItem('bingolive_player_id') ?? '';
 
@@ -34,11 +35,14 @@ export default function BingoBoard() {
     const unsub = onValue(dbRef(db, `sessions/${code}`), (snap) => {
       if (snap.exists()) {
         const v = snap.val();
+        sessionWasLoadedRef.current = true;
         setSession({ id: code, ...v, calledItems: v.calledItems ?? [], wonTypes: v.wonTypes ?? [] } as Session);
+      } else if (sessionWasLoadedRef.current) {
+        navigate('/');
       }
     });
     return () => unsub();
-  }, [code]);
+  }, [code, navigate]);
 
   // Player listener
   useEffect(() => {

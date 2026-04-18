@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ref, set, get, update, onValue, push } from 'firebase/database';
+import { ref, set, get, update, onValue, push, remove } from 'firebase/database';
 import { db } from '../firebase';
 import type { Session, Player, Theme } from '../types';
 import { generateCode } from '../utils/generateCode';
@@ -145,6 +145,10 @@ export async function unmarkItem(
     marked: updated,
     score: Math.max(0, currentScore - 10),
   });
+}
+
+export async function deleteSession(code: string): Promise<void> {
+  await remove(ref(db, `sessions/${code}`));
 }
 
 export async function declareBingo(
