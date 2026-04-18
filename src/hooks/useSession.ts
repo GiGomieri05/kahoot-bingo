@@ -169,18 +169,38 @@ export async function declareBingo(
 
   const playerData = playerSnap.val();
   const sessionData = sessionSnap.val();
-  const board: number[] = playerData.board ?? [];
-  const marked: number[] = playerData.marked ?? [];
-  const calledItems: number[] = sessionData.calledItems ?? [];
-  const wonTypes: string[] = sessionData.wonTypes ?? [];
+
+  // Firebase can return sparse arrays as objects — normalize preserving index order
+  const toArray = (v: unknown): number[] => {
+    if (!v) return [];
+    if (Array.isArray(v)) return v as number[];
+    if (typeof v === 'object') {
+      const obj = v as Record<string, number>;
+      return Object.keys(obj)
+        .map(Number)
+        .sort((a, b) => a - b)
+        .map((k) => obj[k]);
+    }
+    return [];
+  };
+
+  const board: number[] = toArray(playerData.board);
+  const marked: number[] = toArray(playerData.marked);
+  const calledItems: number[] = toArray(sessionData.calledItems);
+  const wonTypes: string[] = Array.isArray(sessionData.wonTypes) ? sessionData.wonTypes : Object.values(sessionData.wonTypes ?? {});
   const pendingBingos: { playerId: string; playerName: string; bingoType: string; points: number }[] =
-    sessionData.pendingBingos ?? [];
+    Array.isArray(sessionData.pendingBingos) ? sessionData.pendingBingos : Object.values(sessionData.pendingBingos ?? {});
+
+  console.log('[declareBingo] board:', board, 'marked:', marked, 'calledItems:', calledItems);
 
   const calledSet = new Set(calledItems);
   // marked stores theme item indices (same as calledItems), not grid positions
   const validMarked = marked.filter((itemIdx) => calledSet.has(itemIdx));
 
+  console.log('[declareBingo] validMarked:', validMarked);
+
   const result = checkBingo(board, validMarked);
+  console.log('[declareBingo] result:', result);
   if (!result.type) return { success: false, reason: 'invalid' };
   if (wonTypes.includes(result.type)) return { success: false, reason: 'already_won' };
   if (pendingBingos.some((p) => p.playerId === playerId)) return { success: false, reason: 'already_pending' };
