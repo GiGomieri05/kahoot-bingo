@@ -91,12 +91,28 @@ export default function BingoBoard() {
     await markItem(code, playerId, itemIdx, player.score);
 
     // Re-fetch player to get latest marked
-    const snap = await get(dbRef(db, `sessions/${code}/players/${playerId}`));
-    if (!snap.exists()) return;
-    const sv = snap.val();
-    const updated = { id: playerId, ...sv, board: sv.board ?? [], marked: sv.marked ?? [] } as Player;
+    const [pSnap, sSnap] = await Promise.all([
+      get(dbRef(db, `sessions/${code}/players/${playerId}`)),
+      get(dbRef(db, `sessions/${code}/calledItems`)),
+    ]);
+    if (!pSnap.exists()) return;
+    const sv = pSnap.val();
+    const toArr = (v: unknown): number[] => {
+      if (!v) return [];
+      if (Array.isArray(v)) return v as number[];
+      if (typeof v === 'object') {
+        const o = v as Record<string, number>;
+        return Object.keys(o).map(Number).sort((a, b) => a - b).map((k) => o[k]);
+      }
+      return [];
+    };
+    const updatedBoard = toArr(sv.board);
+    const updatedMarked = toArr(sv.marked);
+    const updatedCalledItems = toArr(sSnap.val());
+    const updatedCalledSet = new Set(updatedCalledItems);
+    const updatedValidMarked = updatedMarked.filter((idx) => updatedCalledSet.has(idx));
 
-    if (!validateBingo(updated.board, updated.marked)) {
+    if (!validateBingo(updatedBoard, updatedValidMarked)) {
       setBingoClueIndex(null);
     }
   }
@@ -171,7 +187,9 @@ export default function BingoBoard() {
   const playerWonTypes = player.wonTypes ?? [];
   const sessionWonTypes = session?.wonTypes ?? [];
   const allClosedTypes = Array.from(new Set([...playerWonTypes, ...sessionWonTypes]));
-  const bingoResult = checkBingo(player.board, player.marked, allClosedTypes);
+  const calledSet = new Set(session?.calledItems ?? []);
+  const validMarked = player.marked.filter((idx) => calledSet.has(idx));
+  const bingoResult = checkBingo(player.board, validMarked, allClosedTypes);
   const hasBingo = bingoResult.type !== null;
   const showBingoButton = hasBingo && !bingoDeclared;
   const calledCount = session?.calledItems?.length ?? 0;
