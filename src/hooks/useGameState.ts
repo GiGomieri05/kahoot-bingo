@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useSessionListener, usePlayersListener } from './useSession';
-import { validateBingo } from '../utils/validateBingo';
+import { validateBingo, checkNearBingo } from '../utils/validateBingo';
+import type { NearBingoType } from '../utils/validateBingo';
 import type { Theme, Player } from '../types';
 
 export function useGameState(code: string, theme: Theme | null) {
@@ -26,6 +27,27 @@ export function useGameState(code: string, theme: Theme | null) {
     [players]
   );
 
+  const nearBingoPlayers = useMemo((): Array<{ player: Player; nearType: NearBingoType }> => {
+    if (!session) return [];
+    const calledItems: number[] = Array.isArray(session.calledItems)
+      ? session.calledItems
+      : Object.values(session.calledItems ?? {});
+    const sessionWonTypes: string[] = Array.isArray(session.wonTypes)
+      ? session.wonTypes
+      : Object.values(session.wonTypes ?? {});
+
+    return players
+      .filter((p) => !p.bingo)
+      .flatMap((p) => {
+        const board: number[] = Array.isArray(p.board) ? p.board : Object.values(p.board ?? {});
+        const marked: number[] = Array.isArray(p.marked) ? p.marked : Object.values(p.marked ?? {});
+        const playerWonTypes: string[] = Array.isArray(p.wonTypes) ? p.wonTypes : Object.values(p.wonTypes ?? {});
+        const alreadyWon = Array.from(new Set([...playerWonTypes, ...sessionWonTypes]));
+        const nearType = checkNearBingo(board, marked, calledItems, alreadyWon);
+        return nearType ? [{ player: p, nearType }] : [];
+      });
+  }, [players, session]);
+
   return {
     session,
     players,
@@ -34,6 +56,7 @@ export function useGameState(code: string, theme: Theme | null) {
     isGameOver,
     winner,
     validatedWinners,
+    nearBingoPlayers,
     loading,
   };
 }

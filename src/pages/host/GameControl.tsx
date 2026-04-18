@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useThemes } from '../../hooks/useThemes';
 import { useGameState } from '../../hooks/useGameState';
@@ -26,7 +26,12 @@ export default function GameControl() {
   const themeResolved = session
     ? themes.find((t) => t.id === session.themeId) ?? null
     : null;
-  const { currentClue: resolvedClue } = useGameState(code ?? '', themeResolved);
+  const { currentClue: resolvedClue, nearBingoPlayers } = useGameState(code ?? '', themeResolved);
+
+  const nearBingoMap = useMemo(
+    () => new Map(nearBingoPlayers.map(({ player, nearType }) => [player.id, nearType])),
+    [nearBingoPlayers]
+  );
 
   // Auto-navigate when game finishes (full board bingo)
   useEffect(() => {
@@ -266,7 +271,28 @@ export default function GameControl() {
             <p style={{ color: '#8A89A0', fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
               Live Ranking
             </p>
-            <ScoreBoard players={sortedPlayers} />
+
+            {nearBingoPlayers.length > 0 && (
+              <div style={{
+                background: '#FF86C811',
+                border: '1px solid #FF86C855',
+                borderRadius: 10,
+                padding: '8px 14px',
+                marginBottom: 10,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}>
+                <span style={{ fontSize: 16 }}>⚡</span>
+                <span style={{ color: '#FF86C8', fontWeight: 800, fontSize: 13 }}>
+                  {nearBingoPlayers.length === 1
+                    ? '1 player is 1 word away from bingo!'
+                    : `${nearBingoPlayers.length} players are 1 word away from bingo!`}
+                </span>
+              </div>
+            )}
+
+            <ScoreBoard players={sortedPlayers} nearBingoMap={nearBingoMap} />
           </div>
         </div>
       </div>
