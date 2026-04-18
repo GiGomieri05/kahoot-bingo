@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import type { Session, Player, Theme } from '../types';
 import { generateCode } from '../utils/generateCode';
 import { generateBoard } from '../utils/generateBoard';
+import { checkBingo } from '../utils/validateBingo';
 
 export function useSessionListener(code: string) {
   const [session, setSession] = useState<Session | null>(null);
@@ -71,6 +72,7 @@ export async function createSession(themeId: string, hostId: string): Promise<st
     status: 'waiting',
     currentClueIndex: -1,
     calledItems: [],
+    wonTypes: [],
     hostId,
     createdAt: Date.now(),
   });
@@ -145,10 +147,41 @@ export async function unmarkItem(
   });
 }
 
-export async function declareBingo(code: string, playerId: string): Promise<void> {
-  await update(ref(db, `sessions/${code}/players/${playerId}`), { bingo: true });
-}
+export async function declareBingo(
+  code: string,
+  playerId: string
+): Promise<{ success: boolean; reason?: string }> {
+  const [playerSnap, sessionSnap] = await Promise.all([
+    get(ref(db, `sessions/${code}/players/${playerId}`)),
+    get(ref(db, `sessions/${code}`)),
+  ]);
+  if (!playerSnap.exists() || !sessionSnap.exists()) return { success: false, reason: 'not_found' };
 
-export async function invalidateBingo(code: string, playerId: string): Promise<void> {
-  await update(ref(db, `sessions/${code}/players/${playerId}`), { bingo: false });
+  const playerData = playerSnap.val();
+  const sessionData = sessionSnap.val();
+  const board: number[] = playerData.board ?? [];
+  const marked: number[] = playerData.marked ?? [];
+  const wonTypes: string[] = sessionData.wonTypes ?? [];
+
+  const result = checkBingo(board, marked);
+  if (!result.type) return { success: false, reason: 'invalid' };
+  if (wonTypes.includes(result.type)) return { success: false, reason: 'already_won' };
+
+  const newWonTypes = [...wonTypes, result.type];
+  const newScore = (playerData.score ?? 0) + result.points;
+
+  await Promise.all([
+    update(ref(db, `sessions/${code}/players/${playerId}`), {
+      bingo: true,
+      bingoType: result.type,
+      score: newScore,
+    }),
+    update(ref(db, `sessions/${code}`), { wonTypes: newWonTypes }),
+  ]);
+
+  if (result.type === 'full') {
+    await update(ref(db, `sessions/${code}`), { status: 'finished' });
+  }
+
+  return { success: true };
 }

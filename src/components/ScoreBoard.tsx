@@ -42,7 +42,11 @@ export default function ScoreBoard({ players, highlightId }: ScoreBoardProps) {
               }}
             >
               {player.name}
-              {player.bingo && <span style={{ marginLeft: 6, color: '#58CC02' }}>✓ BINGO</span>}
+              {player.bingo && (
+                <span style={{ marginLeft: 6, color: '#58CC02', fontSize: 12 }}>
+                  ✓ {player.bingoType === 'full' ? 'Cartela Cheia' : player.bingoType === 'corners' ? '4 Cantos' : 'Fileira'}
+                </span>
+              )}
             </span>
             <span
               style={{

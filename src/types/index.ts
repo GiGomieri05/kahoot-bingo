@@ -20,6 +20,7 @@ export interface Session {
   calledItems: number[];
   hostId: string;
   createdAt: number;
+  wonTypes: string[];
 }
 
 export interface Player {
@@ -29,5 +30,6 @@ export interface Player {
   marked: number[];
   score: number;
   bingo: boolean;
+  bingoType: string | null;
   joinedAt: number;
 }

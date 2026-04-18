@@ -4,7 +4,7 @@ import { ref as dbRef, get, onValue } from 'firebase/database';
 import { db } from '../../firebase';
 import { useThemes } from '../../hooks/useThemes';
 import { markItem, unmarkItem, declareBingo } from '../../hooks/useSession';
-import { validateBingo } from '../../utils/validateBingo';
+import { checkBingo, validateBingo } from '../../utils/validateBingo';
 import Confetti from '../../components/Confetti';
 import { playCorrect, playBingo } from '../../components/SoundEffects';
 import type { Session, Player, ThemeItem } from '../../types';
@@ -18,6 +18,7 @@ export default function BingoBoard() {
   const [confetti, setConfetti] = useState(false);
   const [cellAnim, setCellAnim] = useState<number | null>(null);
   const [bingoDeclared, setBingoDeclared] = useState(false);
+  const [bingoError, setBingoError] = useState<string | null>(null);
 
   const playerId = localStorage.getItem('bingolive_player_id') ?? '';
 
@@ -33,7 +34,7 @@ export default function BingoBoard() {
     const unsub = onValue(dbRef(db, `sessions/${code}`), (snap) => {
       if (snap.exists()) {
         const v = snap.val();
-        setSession({ id: code, ...v, calledItems: v.calledItems ?? [] } as Session);
+        setSession({ id: code, ...v, calledItems: v.calledItems ?? [], wonTypes: v.wonTypes ?? [] } as Session);
       }
     });
     return () => unsub();
@@ -83,18 +84,25 @@ export default function BingoBoard() {
     const sv = snap.val();
     const updated = { id: playerId, ...sv, board: sv.board ?? [], marked: sv.marked ?? [] } as Player;
 
-    if (validateBingo(updated.board, updated.marked)) {
+    if (!validateBingo(updated.board, updated.marked)) {
       setBingoDeclared(false);
     }
   }
 
   async function handleDeclareBingo() {
     if (!code || !player) return;
-    await declareBingo(code, playerId);
-    setBingoDeclared(true);
-    playBingo();
-    setConfetti(true);
-    setTimeout(() => setConfetti(false), 5000);
+    setBingoError(null);
+    const result = await declareBingo(code, playerId);
+    if (result.success) {
+      setBingoDeclared(true);
+      playBingo();
+      setConfetti(true);
+      setTimeout(() => setConfetti(false), 5000);
+    } else if (result.reason === 'already_won') {
+      setBingoError('Este tipo de bingo já foi conquistado por outro jogador!');
+    } else if (result.reason === 'invalid') {
+      setBingoError('Seu bingo não é válido. Continue marcando!');
+    }
   }
 
   if (!player || !theme) {
@@ -105,7 +113,10 @@ export default function BingoBoard() {
     );
   }
 
-  const hasBingo = validateBingo(player.board, player.marked);
+  const bingoResult = checkBingo(player.board, player.marked);
+  const hasBingo = bingoResult.type !== null;
+  const wonTypes = session?.wonTypes ?? [];
+  const typeAlreadyWon = bingoResult.type ? wonTypes.includes(bingoResult.type) : false;
   const calledCount = session?.calledItems?.length ?? 0;
   const totalItems = theme.items.length;
 
@@ -215,7 +226,7 @@ export default function BingoBoard() {
       </div>
 
       {/* Bingo Button */}
-      {hasBingo && !bingoDeclared && (
+      {hasBingo && !bingoDeclared && !typeAlreadyWon && (
         <button
           onClick={handleDeclareBingo}
           className="btn-3d animate-pulse-glow"
@@ -233,8 +244,29 @@ export default function BingoBoard() {
             fontFamily: 'Nunito, sans-serif',
           }}
         >
-          🎉 BINGO!
+          🎉 BINGO! {bingoResult.type === 'full' ? '(Cartela Cheia +100pts)' : bingoResult.type === 'corners' ? '(4 Cantos +25pts)' : '(Fileira +50pts)'}
         </button>
+      )}
+
+      {hasBingo && typeAlreadyWon && !bingoDeclared && (
+        <div style={{
+          background: '#FF4B4B22', border: '2px solid #FF4B4B55',
+          borderRadius: 16, padding: '16px 24px',
+          textAlign: 'center', color: '#FF4B4B', fontWeight: 800, fontSize: 15,
+        }}>
+          ⚠️ Este tipo de bingo já foi conquistado. Continue marcando!
+        </div>
+      )}
+
+      {bingoError && (
+        <div style={{
+          background: '#FF4B4B22', border: '2px solid #FF4B4B55',
+          borderRadius: 16, padding: '16px 24px',
+          textAlign: 'center', color: '#FF4B4B', fontWeight: 800, fontSize: 15,
+          marginTop: 8,
+        }}>
+          ⚠️ {bingoError}
+        </div>
       )}
 
       {bingoDeclared && (
@@ -243,7 +275,7 @@ export default function BingoBoard() {
           borderRadius: 16, padding: '16px 24px',
           textAlign: 'center', color: '#58CC02', fontWeight: 900, fontSize: 18,
         }}>
-          ✓ Bingo declared! Waiting for validation...
+          ✓ Bingo confirmado! +{bingoResult.points} pts
         </div>
       )}
     </div>

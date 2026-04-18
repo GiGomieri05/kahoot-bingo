@@ -2,22 +2,19 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useThemes } from '../../hooks/useThemes';
 import { useGameState } from '../../hooks/useGameState';
-import { callNextItem, updateSessionStatus, invalidateBingo } from '../../hooks/useSession';
-import { validateBingo } from '../../utils/validateBingo';
+import { callNextItem, updateSessionStatus } from '../../hooks/useSession';
 import ClueDisplay from '../../components/ClueDisplay';
 import ScoreBoard from '../../components/ScoreBoard';
 import Confetti from '../../components/Confetti';
-import { playReveal, playBingo, playWrong } from '../../components/SoundEffects';
-import type { Player } from '../../types';
+import { playReveal, playBingo } from '../../components/SoundEffects';
 
 export default function GameControl() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
   const { themes } = useThemes();
   const [isRevealed, setIsRevealed] = useState(false);
-  const [showBingoAlert, setShowBingoAlert] = useState<Player | null>(null);
   const [confetti, setConfetti] = useState(false);
-  const lastBingoIdRef = useRef<string | null>(null);
+  const lastWonTypesLenRef = useRef<number>(0);
 
   const { session, players, sortedPlayers, loading } = useGameState(
     code ?? '',
@@ -29,14 +26,23 @@ export default function GameControl() {
     : null;
   const { currentClue: resolvedClue } = useGameState(code ?? '', themeResolved);
 
+  // Auto-navigate when game finishes (full board bingo)
   useEffect(() => {
-    const pending = players.find((p) => p.bingo);
-    if (pending && pending.id !== lastBingoIdRef.current) {
-      lastBingoIdRef.current = pending.id;
-      const p = pending;
-      setTimeout(() => setShowBingoAlert(p), 0);
+    if (session?.status === 'finished') {
+      navigate(`/host/results/${code}`);
     }
-  }, [players]);
+  }, [session?.status, code, navigate]);
+
+  // Play sound when someone gets bingo
+  useEffect(() => {
+    const wonLen = session?.wonTypes?.length ?? 0;
+    if (wonLen > lastWonTypesLenRef.current) {
+      lastWonTypesLenRef.current = wonLen;
+      setConfetti(true);
+      playBingo();
+      setTimeout(() => setConfetti(false), 4000);
+    }
+  }, [session?.wonTypes]);
 
   async function handleNextClue() {
     if (!code || !themeResolved || !session) return;
@@ -52,21 +58,6 @@ export default function GameControl() {
 
   function handleReveal() {
     setIsRevealed(true);
-  }
-
-  async function handleValidateBingo() {
-    if (!showBingoAlert || !code) return;
-    const player = showBingoAlert;
-    const valid = validateBingo(player.board, player.marked);
-    if (valid) {
-      setConfetti(true);
-      playBingo();
-      setTimeout(() => setConfetti(false), 5000);
-    } else {
-      playWrong();
-      await invalidateBingo(code, player.id);
-    }
-    setShowBingoAlert(null);
   }
 
   async function handleEndGame() {
@@ -90,45 +81,22 @@ export default function GameControl() {
     <div style={{ minHeight: '100vh', background: '#0B0D1A', padding: '24px 16px' }}>
       <Confetti isActive={confetti} />
 
-      {/* Bingo Alert Overlay */}
-      {showBingoAlert && (
+      {/* Bingo notification banner */}
+      {(session?.wonTypes?.length ?? 0) > 0 && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 200, padding: 24,
+          background: '#FFC80022', border: '1px solid #FFC80055',
+          borderRadius: 12, padding: '10px 20px', marginBottom: 16,
+          display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center',
         }}>
-          <div className="card animate-pop-in" style={{ padding: 48, textAlign: 'center', maxWidth: 440 }}>
-            <div style={{ fontSize: 64, marginBottom: 16 }}>🎉</div>
-            <h2 style={{ color: '#FFC800', fontSize: 32, fontWeight: 900, marginBottom: 8 }}>
-              {showBingoAlert.name} declared BINGO!
-            </h2>
-            <p style={{ color: '#8A89A0', fontWeight: 600, marginBottom: 32 }}>
-              Validate their card?
-            </p>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-              <button
-                onClick={handleValidateBingo}
-                className="btn-3d"
-                style={{
-                  background: '#58CC02', color: '#fff', border: 'none',
-                  borderRadius: 14, padding: '14px 28px', fontSize: 16, fontWeight: 800,
-                  cursor: 'pointer', boxShadow: '0 5px 0 #3a8800', fontFamily: 'Nunito, sans-serif',
-                }}
-              >
-                ✓ Validate
-              </button>
-              <button
-                onClick={() => setShowBingoAlert(null)}
-                style={{
-                  background: '#2A2F52', color: '#8A89A0', border: '1px solid #3a4066',
-                  borderRadius: 14, padding: '14px 28px', fontSize: 16, fontWeight: 800,
-                  cursor: 'pointer', fontFamily: 'Nunito, sans-serif',
-                }}
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
+          <span style={{ color: '#FFC800', fontWeight: 800, fontSize: 14 }}>🏆 Bingos confirmados:</span>
+          {sortedPlayers.filter(p => p.bingo).map(p => (
+            <span key={p.id} style={{
+              background: '#FFC80033', borderRadius: 8, padding: '2px 10px',
+              color: '#FFC800', fontWeight: 700, fontSize: 13,
+            }}>
+              {p.name} ({p.bingoType === 'full' ? 'Cartela Cheia' : p.bingoType === 'corners' ? '4 Cantos' : 'Fileira'})
+            </span>
+          ))}
         </div>
       )}
 
@@ -187,19 +155,21 @@ export default function GameControl() {
               </button>
             </div>
 
-            {/* Called items pills */}
+            {/* Called items pills - only show last 5 */}
             {session && session.calledItems.length > 0 && themeResolved && (
               <div style={{ marginTop: 24 }}>
                 <p style={{ color: '#8A89A0', fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-                  Already called
+                  Últimas chamadas ({session.calledItems.length}/{themeResolved.items.length})
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {session.calledItems.map((idx) => (
+                  {[...session.calledItems].slice(-8).reverse().map((idx, i) => (
                     <span
                       key={idx}
                       style={{
-                        background: '#2A2F52', border: '1px solid #3a4066',
-                        borderRadius: 8, padding: '4px 10px', color: '#8A89A0',
+                        background: i === 0 ? '#1CB0F633' : '#2A2F52',
+                        border: `1px solid ${i === 0 ? '#1CB0F6' : '#3a4066'}`,
+                        borderRadius: 8, padding: '4px 10px',
+                        color: i === 0 ? '#1CB0F6' : '#8A89A0',
                         fontSize: 12, fontWeight: 700,
                       }}
                     >
