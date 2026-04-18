@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useThemes } from '../../hooks/useThemes';
 import { useGameState } from '../../hooks/useGameState';
-import { callNextItem, updateSessionStatus, deleteSession, resumeFromBingo } from '../../hooks/useSession';
+import { callNextItem, updateSessionStatus, resumeFromBingo } from '../../hooks/useSession';
 import ClueDisplay from '../../components/ClueDisplay';
 import ScoreBoard from '../../components/ScoreBoard';
 import Confetti from '../../components/Confetti';
@@ -30,7 +30,7 @@ export default function GameControl() {
   // Auto-navigate when game finishes (full board bingo)
   useEffect(() => {
     if (session?.status === 'finished' && code) {
-      deleteSession(code).then(() => navigate(`/host/results/${code}`));
+      navigate(`/host/results/${code}`);
     }
   }, [session?.status, code, navigate]);
 
@@ -65,7 +65,6 @@ export default function GameControl() {
   async function handleEndGame() {
     if (!code) return;
     await updateSessionStatus(code, 'finished');
-    await deleteSession(code);
     navigate(`/host/results/${code}`);
   }
 

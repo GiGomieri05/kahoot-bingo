@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { usePlayersListener, useSessionListener } from '../../hooks/useSession';
+import { usePlayersListener, useSessionListener, deleteSession } from '../../hooks/useSession';
 import { useThemes } from '../../hooks/useThemes';
 import Confetti from '../../components/Confetti';
 import type { Player } from '../../types';
@@ -13,8 +13,23 @@ export default function Results() {
   const { players } = usePlayersListener(code ?? '');
   const [revealed, setRevealed] = useState(0);
 
-  const theme = session ? themes.find((t) => t.id === session.themeId) : null;
-  const sorted = [...players].sort((a: Player, b: Player) => b.score - a.score);
+  // Apagar sessão quando host sair desta tela
+  useEffect(() => {
+    const codeAtMount = code;
+    return () => {
+      if (codeAtMount) deleteSession(codeAtMount);
+    };
+  }, [code]);
+
+  const theme = useMemo(
+    () => themes.find((t) => t.id === session?.themeId) ?? null,
+    [themes, session?.themeId]
+  );
+  const sorted = useMemo(
+    () => [...players].sort((a: Player, b: Player) => b.score - a.score),
+    [players]
+  );
+  const totalClues = session?.calledItems?.length ?? 0;
 
   useEffect(() => {
     const timer = setTimeout(() => setRevealed(3), 600);
@@ -27,8 +42,6 @@ export default function Results() {
   const MEDAL = ['🥇', '🥈', '🥉'];
   const MEDAL_COLOR = ['#FFC800', '#8A89A0', '#FF9600'];
   const PODIUM_HEIGHT = [120, 90, 70];
-
-  const totalClues = session?.calledItems?.length ?? 0;
 
   return (
     <div style={{ minHeight: '100vh', background: '#0B0D1A', padding: '40px 16px' }}>
