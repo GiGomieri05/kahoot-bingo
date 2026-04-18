@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePlayersListener, useSessionListener } from '../../hooks/useSession';
 import { useThemes } from '../../hooks/useThemes';
@@ -16,6 +17,14 @@ export default function PlayerResults() {
   const { session } = useSessionListener(code ?? '');
   const { players } = usePlayersListener(code ?? '');
   const { themes } = useThemes();
+  const [showSplash, setShowSplash] = useState(true);
+  const [splashOut, setSplashOut] = useState(false);
+
+  useEffect(() => {
+    const outTimer = setTimeout(() => setSplashOut(true), 2800);
+    const hideTimer = setTimeout(() => setShowSplash(false), 3300);
+    return () => { clearTimeout(outTimer); clearTimeout(hideTimer); };
+  }, []);
 
   const playerId = localStorage.getItem('bingolive_player_id') ?? '';
   const myName = localStorage.getItem('bingolive_player_name') ?? '';
@@ -26,6 +35,52 @@ export default function PlayerResults() {
   const myRank = sorted.findIndex((p) => p.id === playerId) + 1;
   const message = getPersonalMessage(myRank, players.length);
   const isWinner = myRank === 1;
+
+  if (showSplash) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: '#0B0D1A',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+      }}>
+        <Confetti isActive duration={3500} />
+        <div
+          className={splashOut ? 'animate-fade-out-up' : 'animate-bingo-zoom'}
+          style={{ textAlign: 'center' }}
+        >
+          <div style={{
+            fontSize: 'clamp(96px, 22vw, 160px)',
+            fontWeight: 900,
+            fontFamily: 'Nunito, sans-serif',
+            background: 'linear-gradient(135deg, #FFC800 0%, #FF86C8 50%, #CE82FF 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            lineHeight: 1,
+            letterSpacing: 8,
+          }}
+            className="animate-bingo-glow"
+          >
+            BINGO!
+          </div>
+          <div style={{
+            marginTop: 24,
+            color: '#E8E6F0',
+            fontSize: 'clamp(18px, 4vw, 28px)',
+            fontWeight: 800,
+            opacity: splashOut ? 0 : 1,
+            transition: 'opacity 0.4s',
+          }}>
+            🎉 Cartela Cheia! Jogo encerrado!
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!myPlayer) {
     return (

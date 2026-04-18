@@ -52,7 +52,7 @@ export default function BingoBoard() {
     const unsub = onValue(dbRef(db, `sessions/${code}/players/${playerId}`), (snap) => {
       if (snap.exists()) {
         const v = snap.val();
-        setPlayer({ id: playerId, ...v, board: v.board ?? [], marked: v.marked ?? [] } as Player);
+        setPlayer({ id: playerId, ...v, board: v.board ?? [], marked: v.marked ?? [], wonTypes: v.wonTypes ?? [] } as Player);
       }
     });
     return () => unsub();
@@ -106,7 +106,7 @@ export default function BingoBoard() {
       setConfetti(true);
       setTimeout(() => setConfetti(false), 5000);
     } else if (result.reason === 'already_won') {
-      setBingoError('Este tipo de bingo já foi conquistado por outro jogador!');
+      setBingoError('Você já conquistou este tipo de bingo!');
     } else if (result.reason === 'invalid') {
       setBingoError('Seu bingo não é válido. Continue marcando!');
     }
@@ -120,10 +120,12 @@ export default function BingoBoard() {
     );
   }
 
-  const bingoResult = checkBingo(player.board, player.marked);
+  const playerWonTypes = player.wonTypes ?? [];
+  const sessionWonTypes = session?.wonTypes ?? [];
+  const allClosedTypes = Array.from(new Set([...playerWonTypes, ...sessionWonTypes]));
+  const bingoResult = checkBingo(player.board, player.marked, allClosedTypes);
   const hasBingo = bingoResult.type !== null;
-  const wonTypes = session?.wonTypes ?? [];
-  const typeAlreadyWon = bingoResult.type ? wonTypes.includes(bingoResult.type) : false;
+  const showBingoButton = hasBingo && !bingoDeclared;
   const calledCount = session?.calledItems?.length ?? 0;
   const totalItems = theme.items.length;
 
@@ -233,7 +235,7 @@ export default function BingoBoard() {
       </div>
 
       {/* Bingo Button */}
-      {hasBingo && !bingoDeclared && !typeAlreadyWon && (
+      {showBingoButton && (
         <button
           onClick={handleDeclareBingo}
           className="btn-3d animate-pulse-glow"
@@ -253,16 +255,6 @@ export default function BingoBoard() {
         >
           🎉 BINGO! {bingoResult.type === 'full' ? '(Cartela Cheia +100pts)' : bingoResult.type === 'corners' ? '(4 Cantos +25pts)' : '(Fileira +50pts)'}
         </button>
-      )}
-
-      {hasBingo && typeAlreadyWon && !bingoDeclared && (
-        <div style={{
-          background: '#FF4B4B22', border: '2px solid #FF4B4B55',
-          borderRadius: 16, padding: '16px 24px',
-          textAlign: 'center', color: '#FF4B4B', fontWeight: 800, fontSize: 15,
-        }}>
-          ⚠️ Este tipo de bingo já foi conquistado. Continue marcando!
-        </div>
       )}
 
       {bingoError && (

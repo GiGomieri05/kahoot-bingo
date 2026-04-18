@@ -91,6 +91,27 @@ body {
 .animate-shake      { animation: shake 0.4s ease; }
 .animate-float      { animation: float 3s ease-in-out infinite; }
 
+@keyframes bingo-zoom {
+  0%   { opacity: 0; transform: scale(0.3) rotate(-8deg); }
+  50%  { opacity: 1; transform: scale(1.12) rotate(3deg); }
+  70%  { transform: scale(0.96) rotate(-1deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+@keyframes bingo-glow-pulse {
+  0%, 100% { text-shadow: 0 0 40px #FFC800, 0 0 80px #FF86C8; }
+  50%       { text-shadow: 0 0 80px #FFC800, 0 0 140px #FF86C8, 0 0 200px #CE82FF; }
+}
+
+@keyframes fade-out-up {
+  0%   { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-40px); }
+}
+
+.animate-bingo-zoom    { animation: bingo-zoom 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+.animate-bingo-glow    { animation: bingo-glow-pulse 1.2s ease-in-out infinite; }
+.animate-fade-out-up   { animation: fade-out-up 0.5s ease forwards; }
+
 .btn-3d {
   position: relative;
   transform: translateY(0);

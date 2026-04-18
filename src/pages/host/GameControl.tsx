@@ -7,6 +7,7 @@ import ClueDisplay from '../../components/ClueDisplay';
 import ScoreBoard from '../../components/ScoreBoard';
 import Confetti from '../../components/Confetti';
 import { playReveal, playBingo } from '../../components/SoundEffects';
+import ModerationPanel from '../../components/ModerationPanel';
 
 export default function GameControl() {
   const { code } = useParams<{ code: string }>();
@@ -170,6 +171,7 @@ export default function GameControl() {
             · Code: <strong style={{ color: '#FFC800' }}>{code}</strong>
           </div>
           <div style={{ flex: 1 }} />
+          {code && <ModerationPanel code={code} players={players} />}
           <button
             onClick={handleEndGame}
             style={{

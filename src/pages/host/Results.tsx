@@ -12,6 +12,8 @@ export default function Results() {
   const { session } = useSessionListener(code ?? '');
   const { players } = usePlayersListener(code ?? '');
   const [revealed, setRevealed] = useState(0);
+  const [showSplash, setShowSplash] = useState(true);
+  const [splashOut, setSplashOut] = useState(false);
 
   // Apagar sessão quando host sair desta tela
   useEffect(() => {
@@ -20,6 +22,12 @@ export default function Results() {
       if (codeAtMount) deleteSession(codeAtMount);
     };
   }, [code]);
+
+  useEffect(() => {
+    const outTimer = setTimeout(() => setSplashOut(true), 2800);
+    const hideTimer = setTimeout(() => setShowSplash(false), 3300);
+    return () => { clearTimeout(outTimer); clearTimeout(hideTimer); };
+  }, []);
 
   const theme = useMemo(
     () => themes.find((t) => t.id === session?.themeId) ?? null,
@@ -42,6 +50,52 @@ export default function Results() {
   const MEDAL = ['🥇', '🥈', '🥉'];
   const MEDAL_COLOR = ['#FFC800', '#8A89A0', '#FF9600'];
   const PODIUM_HEIGHT = [120, 90, 70];
+
+  if (showSplash) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: '#0B0D1A',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+      }}>
+        <Confetti isActive duration={3500} />
+        <div
+          className={splashOut ? 'animate-fade-out-up' : 'animate-bingo-zoom'}
+          style={{ textAlign: 'center' }}
+        >
+          <div style={{
+            fontSize: 'clamp(96px, 22vw, 160px)',
+            fontWeight: 900,
+            fontFamily: 'Nunito, sans-serif',
+            background: 'linear-gradient(135deg, #FFC800 0%, #FF86C8 50%, #CE82FF 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            lineHeight: 1,
+            letterSpacing: 8,
+          }}
+            className="animate-bingo-glow"
+          >
+            BINGO!
+          </div>
+          <div style={{
+            marginTop: 24,
+            color: '#E8E6F0',
+            fontSize: 'clamp(18px, 4vw, 28px)',
+            fontWeight: 800,
+            opacity: splashOut ? 0 : 1,
+            transition: 'opacity 0.4s',
+          }}>
+            🎉 Cartela Cheia! Jogo encerrado!
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#0B0D1A', padding: '40px 16px' }}>

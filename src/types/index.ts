@@ -32,5 +32,6 @@ export interface Player {
   score: number;
   bingo: boolean;
   bingoType: string | null;
+  wonTypes: string[];
   joinedAt: number;
 }

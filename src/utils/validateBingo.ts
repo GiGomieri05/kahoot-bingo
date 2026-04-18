@@ -5,14 +5,14 @@ export interface BingoResult {
   points: number;
 }
 
-export function checkBingo(board: number[], marked: number[]): BingoResult {
+export function checkBingo(board: number[], marked: number[], alreadyWon: string[] = []): BingoResult {
   if (!board?.length || !marked) return { type: null, points: 0 };
   const markedSet = new Set(marked);
   const grid: boolean[] = board.map((idx) => markedSet.has(idx));
 
-  if (grid.every(Boolean)) return { type: 'full', points: 250 };
+  if (!alreadyWon.includes('full') && grid.every(Boolean)) return { type: 'full', points: 250 };
 
-  if (grid[0] && grid[3] && grid[12] && grid[15]) return { type: 'corners', points: 25 };
+  if (!alreadyWon.includes('corners') && grid[0] && grid[3] && grid[12] && grid[15]) return { type: 'corners', points: 25 };
 
   const lines = [
     [0, 1, 2, 3],
@@ -26,7 +26,7 @@ export function checkBingo(board: number[], marked: number[]): BingoResult {
     [0, 5, 10, 15],
     [3, 6, 9, 12],
   ];
-  if (lines.some((line) => line.every((pos) => grid[pos]))) return { type: 'line', points: 50 };
+  if (!alreadyWon.includes('line') && lines.some((line) => line.every((pos) => grid[pos]))) return { type: 'line', points: 50 };
 
   return { type: null, points: 0 };
 }
