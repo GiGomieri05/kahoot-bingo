@@ -31,7 +31,10 @@ export default function BingoBoard() {
   useEffect(() => {
     if (!code) return;
     const unsub = onValue(dbRef(db, `sessions/${code}`), (snap) => {
-      if (snap.exists()) setSession({ id: code, ...snap.val() } as Session);
+      if (snap.exists()) {
+        const v = snap.val();
+        setSession({ id: code, ...v, calledItems: v.calledItems ?? [] } as Session);
+      }
     });
     return () => unsub();
   }, [code]);
@@ -40,7 +43,10 @@ export default function BingoBoard() {
   useEffect(() => {
     if (!code || !playerId) return;
     const unsub = onValue(dbRef(db, `sessions/${code}/players/${playerId}`), (snap) => {
-      if (snap.exists()) setPlayer({ id: playerId, ...snap.val() } as Player);
+      if (snap.exists()) {
+        const v = snap.val();
+        setPlayer({ id: playerId, ...v, board: v.board ?? [], marked: v.marked ?? [] } as Player);
+      }
     });
     return () => unsub();
   }, [code, playerId]);
@@ -70,7 +76,8 @@ export default function BingoBoard() {
     // Re-fetch player to get latest marked
     const snap = await get(dbRef(db, `sessions/${code}/players/${playerId}`));
     if (!snap.exists()) return;
-    const updated = { id: playerId, ...snap.val() } as Player;
+    const sv = snap.val();
+    const updated = { id: playerId, ...sv, board: sv.board ?? [], marked: sv.marked ?? [] } as Player;
 
     if (validateBingo(updated.board, updated.marked)) {
       setBingoDeclared(false);

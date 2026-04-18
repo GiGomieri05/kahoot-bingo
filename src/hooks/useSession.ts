@@ -36,10 +36,15 @@ export function usePlayersListener(code: string) {
     const unsub = onValue(playersRef, (snap) => {
       const data = snap.val();
       if (data) {
-        const list: Player[] = Object.entries(data).map(([id, val]) => ({
-          id,
-          ...(val as Omit<Player, 'id'>),
-        }));
+        const list: Player[] = Object.entries(data).map(([id, val]) => {
+          const v = val as Omit<Player, 'id'>;
+          return {
+            id,
+            ...v,
+            board: v.board ?? [],
+            marked: v.marked ?? [],
+          };
+        });
         setPlayers(list.sort((a, b) => a.joinedAt - b.joinedAt));
       } else {
         setPlayers([]);

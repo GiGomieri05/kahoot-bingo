@@ -1,4 +1,5 @@
 export function validateBingo(board: number[], marked: number[]): boolean {
+  if (!board?.length || !marked) return false;
   const markedSet = new Set(marked);
   const grid: boolean[] = board.map((idx) => markedSet.has(idx));
 
