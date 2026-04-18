@@ -16,7 +16,13 @@ export function useSessionListener(code: string) {
     const unsub = onValue(sessionRef, (snap) => {
       const data = snap.val();
       if (data) {
-        setSession({ id: code, ...data, calledItems: data.calledItems ?? [] } as Session);
+        setSession({
+          id: code,
+          ...data,
+          calledItems: data.calledItems ?? [],
+          wonTypes: data.wonTypes ?? [],
+          pendingBingos: data.pendingBingos ?? [],
+        } as Session);
       } else {
         setSession(null);
       }
@@ -165,14 +171,24 @@ export async function declareBingo(
   const sessionData = sessionSnap.val();
   const board: number[] = playerData.board ?? [];
   const marked: number[] = playerData.marked ?? [];
+  const calledItems: number[] = sessionData.calledItems ?? [];
   const wonTypes: string[] = sessionData.wonTypes ?? [];
+  const pendingBingos: { playerId: string; playerName: string; bingoType: string; points: number }[] =
+    sessionData.pendingBingos ?? [];
 
-  const result = checkBingo(board, marked);
+  const calledSet = new Set(calledItems);
+  const validMarked = marked.filter((pos) => calledSet.has(board[pos]));
+
+  const result = checkBingo(board, validMarked);
   if (!result.type) return { success: false, reason: 'invalid' };
   if (wonTypes.includes(result.type)) return { success: false, reason: 'already_won' };
+  if (pendingBingos.some((p) => p.playerId === playerId)) return { success: false, reason: 'already_pending' };
 
-  const newWonTypes = [...wonTypes, result.type];
   const newScore = (playerData.score ?? 0) + result.points;
+  const newPending = [
+    ...pendingBingos,
+    { playerId, playerName: playerData.name, bingoType: result.type, points: result.points },
+  ];
 
   await Promise.all([
     update(ref(db, `sessions/${code}/players/${playerId}`), {
@@ -180,12 +196,19 @@ export async function declareBingo(
       bingoType: result.type,
       score: newScore,
     }),
-    update(ref(db, `sessions/${code}`), { wonTypes: newWonTypes }),
+    update(ref(db, `sessions/${code}`), {
+      wonTypes: [...wonTypes, result.type],
+      pendingBingos: newPending,
+      status: result.type === 'full' ? 'finished' : 'bingo_pending',
+    }),
   ]);
 
-  if (result.type === 'full') {
-    await update(ref(db, `sessions/${code}`), { status: 'finished' });
-  }
-
   return { success: true };
+}
+
+export async function resumeFromBingo(code: string): Promise<void> {
+  await update(ref(db, `sessions/${code}`), {
+    status: 'playing',
+    pendingBingos: [],
+  });
 }

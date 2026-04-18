@@ -17,9 +17,11 @@ export default function BingoBoard() {
   const [player, setPlayer] = useState<Player | null>(null);
   const [confetti, setConfetti] = useState(false);
   const [cellAnim, setCellAnim] = useState<number | null>(null);
-  const [bingoDeclared, setBingoDeclared] = useState(false);
+  const [bingoClueIndex, setBingoClueIndex] = useState<number | null>(null);
   const [bingoError, setBingoError] = useState<string | null>(null);
   const sessionWasLoadedRef = useRef(false);
+
+  const bingoDeclared = bingoClueIndex !== null && bingoClueIndex === session?.currentClueIndex;
 
   const playerId = localStorage.getItem('bingolive_player_id') ?? '';
 
@@ -63,6 +65,7 @@ export default function BingoBoard() {
     }
   }, [session?.status, code, navigate]);
 
+
   async function handleCellTap(boardPos: number) {
     if (!code || !player || !theme) return;
     const itemIdx = player.board[boardPos];
@@ -89,7 +92,7 @@ export default function BingoBoard() {
     const updated = { id: playerId, ...sv, board: sv.board ?? [], marked: sv.marked ?? [] } as Player;
 
     if (!validateBingo(updated.board, updated.marked)) {
-      setBingoDeclared(false);
+      setBingoClueIndex(null);
     }
   }
 
@@ -98,7 +101,7 @@ export default function BingoBoard() {
     setBingoError(null);
     const result = await declareBingo(code, playerId);
     if (result.success) {
-      setBingoDeclared(true);
+      setBingoClueIndex(session?.currentClueIndex ?? -1);
       playBingo();
       setConfetti(true);
       setTimeout(() => setConfetti(false), 5000);

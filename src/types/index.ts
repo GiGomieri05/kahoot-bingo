@@ -15,12 +15,13 @@ export interface Session {
   id: string;
   code: string;
   themeId: string;
-  status: 'waiting' | 'playing' | 'finished';
+  status: 'waiting' | 'playing' | 'bingo_pending' | 'finished';
   currentClueIndex: number;
   calledItems: number[];
   hostId: string;
   createdAt: number;
   wonTypes: string[];
+  pendingBingos?: { playerId: string; playerName: string; bingoType: string; points: number }[];
 }
 
 export interface Player {

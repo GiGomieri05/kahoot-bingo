@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useThemes } from '../../hooks/useThemes';
 import { useGameState } from '../../hooks/useGameState';
-import { callNextItem, updateSessionStatus, deleteSession } from '../../hooks/useSession';
+import { callNextItem, updateSessionStatus, deleteSession, resumeFromBingo } from '../../hooks/useSession';
 import ClueDisplay from '../../components/ClueDisplay';
 import ScoreBoard from '../../components/ScoreBoard';
 import Confetti from '../../components/Confetti';
@@ -79,10 +79,59 @@ export default function GameControl() {
 
   const calledCount = session?.calledItems?.length ?? 0;
   const totalItems = themeResolved?.items.length ?? 0;
+  const isBingoPending = session?.status === 'bingo_pending';
+  const pendingBingos = session?.pendingBingos?.map((pb) => ({ ...pb })) ?? [];
 
   return (
     <div style={{ minHeight: '100vh', background: '#0B0D1A', padding: '24px 16px' }}>
       <Confetti isActive={confetti} />
+
+      {/* Bingo Pending Overlay */}
+      {isBingoPending && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 200, padding: 24,
+        }}>
+          <div className="card animate-pop-in" style={{ padding: 40, textAlign: 'center', maxWidth: 500, width: '100%' }}>
+            <div style={{ fontSize: 56, marginBottom: 12 }}>🎉</div>
+            <h2 style={{ color: '#FFC800', fontSize: 28, fontWeight: 900, marginBottom: 8 }}>
+              BINGO!
+            </h2>
+            <p style={{ color: '#8A89A0', fontWeight: 600, marginBottom: 24, fontSize: 15 }}>
+              {pendingBingos.length === 1
+                ? `${pendingBingos[0].playerName} cantou bingo!`
+                : `${pendingBingos.length} jogadores cantaram bingo ao mesmo tempo!`}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
+              {pendingBingos.map((pb) => (
+                <div key={pb.playerId} style={{
+                  background: '#FFC80022', border: '1px solid #FFC80055',
+                  borderRadius: 12, padding: '12px 20px',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}>
+                  <span style={{ color: '#E8E6F0', fontWeight: 800, fontSize: 16 }}>{pb.playerName}</span>
+                  <span style={{ color: '#FFC800', fontWeight: 700, fontSize: 13 }}>
+                    {pb.bingoType === 'full' ? 'Cartela Cheia' : pb.bingoType === 'corners' ? '4 Cantos' : 'Fileira'} · +{pb.points}pts
+                  </span>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => code && resumeFromBingo(code)}
+              className="btn-3d"
+              style={{
+                background: '#58CC02', color: '#fff', border: 'none',
+                borderRadius: 14, padding: '16px 40px', fontSize: 18, fontWeight: 900,
+                cursor: 'pointer', boxShadow: '0 5px 0 #3a8800', fontFamily: 'Nunito, sans-serif',
+                width: '100%',
+              }}
+            >
+              ▶ Continuar Jogo
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Bingo notification banner */}
       {(session?.wonTypes?.length ?? 0) > 0 && (
@@ -148,11 +197,16 @@ export default function GameControl() {
             <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'center' }}>
               <button
                 onClick={handleNextClue}
+                disabled={isBingoPending}
                 className="btn-3d"
                 style={{
-                  background: '#1CB0F6', color: '#fff', border: 'none',
+                  background: isBingoPending ? '#2A2F52' : '#1CB0F6',
+                  color: isBingoPending ? '#8A89A0' : '#fff',
+                  border: 'none',
                   borderRadius: 14, padding: '18px 40px', fontSize: 20, fontWeight: 900,
-                  cursor: 'pointer', boxShadow: '0 6px 0 #0a7ab8', fontFamily: 'Nunito, sans-serif',
+                  cursor: isBingoPending ? 'not-allowed' : 'pointer',
+                  boxShadow: isBingoPending ? 'none' : '0 6px 0 #0a7ab8',
+                  fontFamily: 'Nunito, sans-serif',
                 }}
               >
                 Next Clue 🎲
