@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ref as dbRef, get, onValue } from 'firebase/database';
 import { db } from '../../firebase';
 import { useThemes } from '../../hooks/useThemes';
-import { markItem, declareBingo } from '../../hooks/useSession';
+import { markItem, unmarkItem, declareBingo } from '../../hooks/useSession';
 import { validateBingo } from '../../utils/validateBingo';
 import Confetti from '../../components/Confetti';
 import { playCorrect, playBingo } from '../../components/SoundEffects';
@@ -62,10 +62,14 @@ export default function BingoBoard() {
     if (!code || !player || !theme) return;
     const itemIdx = player.board[boardPos];
     const alreadyMarked = player.marked.includes(itemIdx);
-    if (alreadyMarked) return;
 
     setCellAnim(boardPos);
     setTimeout(() => setCellAnim(null), 300);
+
+    if (alreadyMarked) {
+      await unmarkItem(code, playerId, itemIdx, player.score);
+      return;
+    }
 
     const isCorrect = currentClue && theme.items[itemIdx]?.word === currentClue.word;
     if (isCorrect) {
@@ -177,7 +181,7 @@ export default function BingoBoard() {
                 borderRadius: 14,
                 padding: '12px 6px',
                 minHeight: 72,
-                cursor: isMarked ? 'default' : 'pointer',
+                cursor: 'pointer',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -199,6 +203,8 @@ export default function BingoBoard() {
                 textAlign: 'center',
                 lineHeight: 1.2,
                 wordBreak: 'break-word',
+                hyphens: 'auto',
+                overflowWrap: 'break-word',
                 fontFamily: 'Nunito, sans-serif',
               }}>
                 {item?.word ?? '?'}

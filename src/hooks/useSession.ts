@@ -15,7 +15,7 @@ export function useSessionListener(code: string) {
     const unsub = onValue(sessionRef, (snap) => {
       const data = snap.val();
       if (data) {
-        setSession({ id: code, ...data } as Session);
+        setSession({ id: code, ...data, calledItems: data.calledItems ?? [] } as Session);
       } else {
         setSession(null);
       }
@@ -126,6 +126,22 @@ export async function markItem(
   await update(ref(db, `sessions/${code}/players/${playerId}`), {
     marked: updated,
     score: currentScore + 10,
+  });
+}
+
+export async function unmarkItem(
+  code: string,
+  playerId: string,
+  itemIndex: number,
+  currentScore: number
+): Promise<void> {
+  const snap = await get(ref(db, `sessions/${code}/players/${playerId}/marked`));
+  const current: number[] = snap.val() ?? [];
+  if (!current.includes(itemIndex)) return;
+  const updated = current.filter((i) => i !== itemIndex);
+  await update(ref(db, `sessions/${code}/players/${playerId}`), {
+    marked: updated,
+    score: Math.max(0, currentScore - 10),
   });
 }
 
