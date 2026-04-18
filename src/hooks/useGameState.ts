@@ -32,18 +32,16 @@ export function useGameState(code: string, theme: Theme | null) {
     const calledItems: number[] = Array.isArray(session.calledItems)
       ? session.calledItems
       : Object.values(session.calledItems ?? {});
-    const sessionWonTypes: string[] = Array.isArray(session.wonTypes)
-      ? session.wonTypes
-      : Object.values(session.wonTypes ?? {});
+    const calledSet = new Set(calledItems);
 
     return players
-      .filter((p) => !p.bingo)
+      .filter((p) => !p.wonTypes?.includes('full'))
       .flatMap((p) => {
         const board: number[] = Array.isArray(p.board) ? p.board : Object.values(p.board ?? {});
-        const marked: number[] = Array.isArray(p.marked) ? p.marked : Object.values(p.marked ?? {});
+        const allMarked: number[] = Array.isArray(p.marked) ? p.marked : Object.values(p.marked ?? {});
+        const marked = allMarked.filter((idx) => calledSet.has(idx));
         const playerWonTypes: string[] = Array.isArray(p.wonTypes) ? p.wonTypes : Object.values(p.wonTypes ?? {});
-        const alreadyWon = Array.from(new Set([...playerWonTypes, ...sessionWonTypes]));
-        const nearType = checkNearBingo(board, marked, calledItems, alreadyWon);
+        const nearType = checkNearBingo(board, marked, calledItems, playerWonTypes);
         return nearType ? [{ player: p, nearType }] : [];
       });
   }, [players, session]);

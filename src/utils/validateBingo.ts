@@ -52,22 +52,21 @@ export function checkNearBingo(
   const markedSet = new Set(marked);
   const calledSet = new Set(calledItems);
   const grid: boolean[] = board.map((idx) => markedSet.has(idx));
-  const pending: boolean[] = board.map((idx) => !markedSet.has(idx) && calledSet.has(idx));
 
   const missingCount = (positions: number[]) =>
     positions.filter((pos) => !grid[pos]).length;
 
-  const hasPendingInPattern = (positions: number[]) =>
-    positions.some((pos) => !grid[pos] && pending[pos]);
+  const missingNotCalled = (positions: number[]) =>
+    positions.filter((pos) => !grid[pos] && !calledSet.has(board[pos])).length;
 
   if (!alreadyWon.includes('full')) {
-    const missing = missingCount(Array.from({ length: 16 }, (_, i) => i));
-    if (missing === 1 && hasPendingInPattern(Array.from({ length: 16 }, (_, i) => i))) return 'full';
+    const allPos = Array.from({ length: 16 }, (_, i) => i);
+    if (missingCount(allPos) === 1 && missingNotCalled(allPos) <= 1) return 'full';
   }
 
   if (!alreadyWon.includes('corners')) {
     const corners = [0, 3, 12, 15];
-    if (missingCount(corners) === 1 && hasPendingInPattern(corners)) return 'corners';
+    if (missingCount(corners) === 1 && missingNotCalled(corners) <= 1) return 'corners';
   }
 
   const lines = [
@@ -76,7 +75,7 @@ export function checkNearBingo(
     [0, 5, 10, 15], [3, 6, 9, 12],
   ];
   if (!alreadyWon.includes('line')) {
-    if (lines.some((line) => missingCount(line) === 1 && hasPendingInPattern(line))) return 'line';
+    if (lines.some((line) => missingCount(line) === 1 && missingNotCalled(line) <= 1)) return 'line';
   }
 
   return null;
