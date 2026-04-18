@@ -27,7 +27,7 @@ export default function JoinSession() {
       const snap = await get(ref(db, `sessions/${trimCode}`));
       if (!snap.exists()) { triggerError("Session not found. Check the code."); setLoading(false); return; }
       const session = snap.val();
-      if (session.status !== 'waiting') { triggerError("This session has already started."); setLoading(false); return; }
+      if (session.status !== 'waiting' && session.status !== 'playing') { triggerError("This session has already ended."); setLoading(false); return; }
       const theme = themes.find((t) => t.id === session.themeId);
       if (!theme) { triggerError("Theme not loaded. Try again."); setLoading(false); return; }
       const playerId = await joinSession(trimCode, trimName, theme);
@@ -35,7 +35,11 @@ export default function JoinSession() {
       localStorage.setItem('bingolive_player_id', playerId);
       localStorage.setItem('bingolive_player_name', trimName);
       localStorage.setItem('bingolive_player_code', trimCode);
-      navigate(`/waiting/${trimCode}`);
+      if (session.status === 'playing') {
+        navigate(`/board/${trimCode}`);
+      } else {
+        navigate(`/waiting/${trimCode}`);
+      }
     } catch {
       triggerError('Connection error. Check your internet.');
       setLoading(false);

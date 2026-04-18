@@ -89,7 +89,7 @@ export async function joinSession(code: string, playerName: string, theme: Theme
   const snap = await get(ref(db, `sessions/${code}`));
   if (!snap.exists()) return null;
   const session = snap.val() as Session;
-  if (session.status !== 'waiting') return null;
+  if (session.status !== 'waiting' && session.status !== 'playing') return null;
 
   const board = generateBoard(theme.items);
   const newPlayerRef = push(ref(db, `sessions/${code}/players`));
