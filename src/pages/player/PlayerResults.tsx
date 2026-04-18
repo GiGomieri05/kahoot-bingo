@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useEffect, useState } from 'react';
 import { usePlayersListener, useSessionListener } from '../../hooks/useSession';
 import { useThemes } from '../../hooks/useThemes';
 import Confetti from '../../components/Confetti';
