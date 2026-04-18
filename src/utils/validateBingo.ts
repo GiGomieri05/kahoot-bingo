@@ -10,7 +10,7 @@ export function checkBingo(board: number[], marked: number[]): BingoResult {
   const markedSet = new Set(marked);
   const grid: boolean[] = board.map((idx) => markedSet.has(idx));
 
-  if (grid.every(Boolean)) return { type: 'full', points: 100 };
+  if (grid.every(Boolean)) return { type: 'full', points: 250 };
 
   if (grid[0] && grid[3] && grid[12] && grid[15]) return { type: 'corners', points: 25 };
 
