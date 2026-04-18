@@ -1,7 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSessionListener, usePlayersListener } from '../../hooks/useSession';
 import { useThemes } from '../../hooks/useThemes';
+import { onValue, ref as dbRef } from 'firebase/database';
+import { db } from '../../firebase';
 
 export default function WaitingRoom() {
   const { code } = useParams<{ code: string }>();
@@ -10,8 +12,11 @@ export default function WaitingRoom() {
   const { players } = usePlayersListener(code ?? '');
   const { themes } = useThemes();
   const myName = localStorage.getItem('bingolive_player_name') ?? '';
+  const playerId = localStorage.getItem('bingolive_player_id') ?? '';
   const theme = session ? themes.find((t) => t.id === session.themeId) : null;
   const sessionWasLoadedRef = useRef(false);
+  const playerWasLoadedRef = useRef(false);
+  const [kicked, setKicked] = useState(false);
 
   useEffect(() => {
     if (!loading && session) sessionWasLoadedRef.current = true;
@@ -22,7 +27,62 @@ export default function WaitingRoom() {
     if (session?.status === 'finished') navigate(`/player-results/${code}`);
   }, [session, loading, code, navigate]);
 
+  useEffect(() => {
+    if (!code || !playerId) return;
+    const unsub = onValue(dbRef(db, `sessions/${code}/players/${playerId}`), (snap) => {
+      if (snap.exists()) {
+        playerWasLoadedRef.current = true;
+      } else if (playerWasLoadedRef.current) {
+        setKicked(true);
+      }
+    });
+    return () => unsub();
+  }, [code, playerId]);
+
   const BADGE_COLORS = ['#1CB0F6','#CE82FF','#58CC02','#FFC800','#FF86C8','#FF9600'];
+
+  if (kicked) {
+    return (
+      <div style={{
+        minHeight: '100vh', background: '#0B0D1A',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: '24px 16px',
+      }}>
+        <div className="card animate-fade-scale" style={{ width: '100%', maxWidth: 420, padding: 36, textAlign: 'center' }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>🚫</div>
+          <h2 style={{ fontWeight: 900, fontSize: 24, color: '#FF4B4B', marginBottom: 12 }}>
+            Você foi removido
+          </h2>
+          <p style={{ color: '#8A89A0', fontWeight: 600, fontSize: 15, marginBottom: 24 }}>
+            O host removeu você da sessão. Entre novamente com o código da sala e um nome diferente.
+          </p>
+          <div style={{
+            background: '#FFC80022', border: '1px solid #FFC80055',
+            borderRadius: 12, padding: '12px 20px', marginBottom: 24,
+            color: '#FFC800', fontWeight: 900, fontSize: 28, letterSpacing: 8,
+          }}>
+            {code}
+          </div>
+          <button
+            onClick={() => {
+              localStorage.removeItem('bingolive_player_id');
+              localStorage.removeItem('bingolive_player_name');
+              navigate(`/play/${code}`);
+            }}
+            className="btn-3d"
+            style={{
+              background: '#1CB0F6', color: '#fff', border: 'none',
+              borderRadius: 14, padding: '16px 32px', fontSize: 18, fontWeight: 900,
+              cursor: 'pointer', boxShadow: '0 5px 0 #0a7ab8',
+              width: '100%', fontFamily: 'Nunito, sans-serif',
+            }}
+          >
+            🔄 Entrar novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{

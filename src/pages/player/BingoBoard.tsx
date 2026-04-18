@@ -19,7 +19,9 @@ export default function BingoBoard() {
   const [cellAnim, setCellAnim] = useState<number | null>(null);
   const [bingoClueIndex, setBingoClueIndex] = useState<number | null>(null);
   const [bingoError, setBingoError] = useState<string | null>(null);
+  const [kicked, setKicked] = useState(false);
   const sessionWasLoadedRef = useRef(false);
+  const playerWasLoadedRef = useRef(false);
 
   const bingoDeclared = bingoClueIndex !== null && bingoClueIndex === session?.currentClueIndex;
 
@@ -51,8 +53,11 @@ export default function BingoBoard() {
     if (!code || !playerId) return;
     const unsub = onValue(dbRef(db, `sessions/${code}/players/${playerId}`), (snap) => {
       if (snap.exists()) {
+        playerWasLoadedRef.current = true;
         const v = snap.val();
         setPlayer({ id: playerId, ...v, board: v.board ?? [], marked: v.marked ?? [], wonTypes: v.wonTypes ?? [] } as Player);
+      } else if (playerWasLoadedRef.current) {
+        setKicked(true);
       }
     });
     return () => unsub();
@@ -110,6 +115,49 @@ export default function BingoBoard() {
     } else if (result.reason === 'invalid') {
       setBingoError('Seu bingo não é válido. Continue marcando!');
     }
+  }
+
+  if (kicked) {
+    return (
+      <div style={{
+        minHeight: '100vh', background: '#0B0D1A',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: '24px 16px',
+      }}>
+        <div className="card animate-fade-scale" style={{ width: '100%', maxWidth: 420, padding: 36, textAlign: 'center' }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>🚫</div>
+          <h2 style={{ fontWeight: 900, fontSize: 24, color: '#FF4B4B', marginBottom: 12 }}>
+            Você foi removido
+          </h2>
+          <p style={{ color: '#8A89A0', fontWeight: 600, fontSize: 15, marginBottom: 24 }}>
+            O host removeu você da sessão. Entre novamente com o código da sala e um nome diferente.
+          </p>
+          <div style={{
+            background: '#FFC80022', border: '1px solid #FFC80055',
+            borderRadius: 12, padding: '12px 20px', marginBottom: 24,
+            color: '#FFC800', fontWeight: 900, fontSize: 28, letterSpacing: 8,
+          }}>
+            {code}
+          </div>
+          <button
+            onClick={() => {
+              localStorage.removeItem('bingolive_player_id');
+              localStorage.removeItem('bingolive_player_name');
+              navigate(`/play/${code}`);
+            }}
+            className="btn-3d"
+            style={{
+              background: '#1CB0F6', color: '#fff', border: 'none',
+              borderRadius: 14, padding: '16px 32px', fontSize: 18, fontWeight: 900,
+              cursor: 'pointer', boxShadow: '0 5px 0 #0a7ab8',
+              width: '100%', fontFamily: 'Nunito, sans-serif',
+            }}
+          >
+            🔄 Entrar novamente
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (!player || !theme) {
