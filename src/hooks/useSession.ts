@@ -177,7 +177,8 @@ export async function declareBingo(
     sessionData.pendingBingos ?? [];
 
   const calledSet = new Set(calledItems);
-  const validMarked = marked.filter((pos) => calledSet.has(board[pos]));
+  // marked stores theme item indices (same as calledItems), not grid positions
+  const validMarked = marked.filter((itemIdx) => calledSet.has(itemIdx));
 
   const result = checkBingo(board, validMarked);
   if (!result.type) return { success: false, reason: 'invalid' };
