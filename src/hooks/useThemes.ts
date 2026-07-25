@@ -78,22 +78,31 @@ const DEFAULT_THEMES: Omit<Theme, 'id'>[] = [
 export function useThemes() {
   const [themes, setThemes] = useState<Theme[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const themesRef = ref(db, 'themes');
-    const unsub = onValue(themesRef, (snap) => {
-      const data = snap.val();
-      if (data) {
-        const list: Theme[] = Object.entries(data).map(([id, val]) => ({
-          id,
-          ...(val as Omit<Theme, 'id'>),
-        }));
-        setThemes(list);
-      } else {
-        setThemes([]);
+    const unsub = onValue(
+      themesRef,
+      (snap) => {
+        const data = snap.val();
+        if (data) {
+          const list: Theme[] = Object.entries(data).map(([id, val]) => ({
+            id,
+            ...(val as Omit<Theme, 'id'>),
+          }));
+          setThemes(list);
+        } else {
+          setThemes([]);
+        }
+        setError(null);
+        setLoading(false);
+      },
+      (err) => {
+        setError(err.message);
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    );
     return () => unsub();
   }, []);
 
@@ -118,5 +127,5 @@ export function useThemes() {
     await set(ref(db, `themes/${id}`), { name, description, items, createdAt: Date.now() });
   }
 
-  return { themes, loading, createTheme, deleteTheme, seedDefaultThemes, updateTheme };
+  return { themes, loading, error, createTheme, deleteTheme, seedDefaultThemes, updateTheme };
 }
