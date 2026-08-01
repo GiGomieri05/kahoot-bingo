@@ -5,9 +5,11 @@ import { useGameState } from '../../hooks/useGameState';
 import { callNextItem, updateSessionStatus, resumeFromBingo } from '../../hooks/useSession';
 import ClueDisplay from '../../components/ClueDisplay';
 import ScoreBoard from '../../components/ScoreBoard';
+import CalledStones from '../../components/CalledStones';
 import Confetti from '../../components/Confetti';
 import { playReveal, playBingo } from '../../components/SoundEffects';
 import ModerationPanel from '../../components/ModerationPanel';
+import { isNumberTheme, NUMBER_THEME } from '../../utils/numberTheme';
 
 export default function GameControl() {
   const { code } = useParams<{ code: string }>();
@@ -24,7 +26,9 @@ export default function GameControl() {
   );
 
   const themeResolved = session
-    ? themes.find((t) => t.id === session.themeId) ?? null
+    ? (isNumberTheme(session.themeId)
+        ? NUMBER_THEME
+        : themes.find((t) => t.id === session.themeId) ?? null)
     : null;
   const { currentClue: resolvedClue, nearBingoPlayers } = useGameState(code ?? '', themeResolved);
 
@@ -263,6 +267,10 @@ export default function GameControl() {
                   ))}
                 </div>
               </div>
+            )}
+
+            {session?.mode === 'numbers' && themeResolved && (
+              <CalledStones calledItems={session.calledItems} items={themeResolved.items} />
             )}
           </div>
 

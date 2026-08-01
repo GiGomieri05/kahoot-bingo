@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePlayersListener, useSessionListener } from '../../hooks/useSession';
 import { useThemes } from '../../hooks/useThemes';
+import { isNumberTheme, NUMBER_THEME } from '../../utils/numberTheme';
 import Confetti from '../../components/Confetti';
 
 function getPersonalMessage(rank: number, total: number): string {
@@ -28,7 +29,11 @@ export default function PlayerResults() {
 
   const playerId = localStorage.getItem('bingolive_player_id') ?? '';
   const myName = localStorage.getItem('bingolive_player_name') ?? '';
-  const theme = session ? themes.find((t) => t.id === session.themeId) : null;
+  const theme = session
+    ? (isNumberTheme(session.themeId)
+        ? NUMBER_THEME
+        : themes.find((t) => t.id === session.themeId))
+    : null;
 
   const sorted = [...players].sort((a, b) => b.score - a.score);
   const myPlayer = players.find((p) => p.id === playerId);
@@ -154,14 +159,35 @@ export default function PlayerResults() {
             </p>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
+              gridTemplateColumns: 'repeat(5, 1fr)',
               gap: 6,
             }}>
+              {['B', 'I', 'N', 'G', 'O'].map((letter) => (
+                <div
+                  key={letter}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#E8E6F0',
+                    fontSize: 18,
+                    fontWeight: 900,
+                    fontFamily: 'Nunito, sans-serif',
+                    background: '#1a1f42',
+                    border: '1px solid #2A2F52',
+                    borderRadius: 10,
+                    minHeight: 40,
+                  }}
+                >
+                  {letter}
+                </div>
+              ))}
               {myPlayer.board.map((itemIdx, pos) => {
-                const item = theme.items[itemIdx];
-                const isMarked = myPlayer.marked.includes(itemIdx);
-                const wasCalled = session?.calledItems?.includes(itemIdx);
-                const isCorrect = isMarked && wasCalled;
+                const isFreeSpace = itemIdx === -1;
+                const item = isFreeSpace ? undefined : theme.items[itemIdx];
+                const isMarked = isFreeSpace || myPlayer.marked.includes(itemIdx);
+                const wasCalled = isFreeSpace || session?.calledItems?.includes(itemIdx);
+                const isCorrect = isFreeSpace || (isMarked && wasCalled);
                 return (
                   <div
                     key={pos}
@@ -184,7 +210,7 @@ export default function PlayerResults() {
                       justifyContent: 'center',
                     }}
                   >
-                    {item?.word ?? '?'}
+                    {isFreeSpace ? '⭐' : item?.word ?? '?'}
                   </div>
                 );
               })}

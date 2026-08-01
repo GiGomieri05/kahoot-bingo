@@ -20,8 +20,8 @@ export function useSessionListener(code: string) {
           id: code,
           ...data,
           calledItems: data.calledItems ?? [],
-          wonTypes: data.wonTypes ?? [],
-          pendingBingos: data.pendingBingos ?? [],
+          wonTypes: data.wonTypes ? Object.values(data.wonTypes) : [],
+          pendingBingos: data.pendingBingos ? Object.values(data.pendingBingos) : [],
         } as Session);
       } else {
         setSession(null);
@@ -50,6 +50,7 @@ export function usePlayersListener(code: string) {
             ...v,
             board: v.board ?? [],
             marked: v.marked ?? [],
+            wonTypes: v.wonTypes ? Object.values(v.wonTypes) : [],
           };
         });
         setPlayers(list.sort((a, b) => a.joinedAt - b.joinedAt));
@@ -63,7 +64,11 @@ export function usePlayersListener(code: string) {
   return { players };
 }
 
-export async function createSession(themeId: string, hostId: string): Promise<string> {
+export async function createSession(
+  themeId: string,
+  hostId: string,
+  mode: 'words' | 'numbers' = 'words'
+): Promise<string> {
   let code = generateCode();
   let attempts = 0;
   while (attempts < 10) {
@@ -75,6 +80,7 @@ export async function createSession(themeId: string, hostId: string): Promise<st
   await set(ref(db, `sessions/${code}`), {
     code,
     themeId,
+    mode,
     status: 'waiting',
     currentClueIndex: -1,
     calledItems: [],
@@ -128,6 +134,7 @@ export async function markItem(
   itemIndex: number,
   currentScore: number
 ): Promise<void> {
+  if (itemIndex < 0) return;
   const [markedSnap, calledSnap] = await Promise.all([
     get(ref(db, `sessions/${code}/players/${playerId}/marked`)),
     get(ref(db, `sessions/${code}/calledItems`)),
@@ -149,6 +156,7 @@ export async function unmarkItem(
   itemIndex: number,
   currentScore: number
 ): Promise<void> {
+  if (itemIndex < 0) return;
   const [markedSnap, calledSnap] = await Promise.all([
     get(ref(db, `sessions/${code}/players/${playerId}/marked`)),
     get(ref(db, `sessions/${code}/calledItems`)),
@@ -202,7 +210,6 @@ export async function declareBingo(
   const board: number[] = toArray(playerData.board);
   const marked: number[] = toArray(playerData.marked);
   const calledItems: number[] = toArray(sessionData.calledItems);
-  const sessionWonTypes: string[] = Array.isArray(sessionData.wonTypes) ? sessionData.wonTypes : Object.values(sessionData.wonTypes ?? {});
   const playerWonTypes: string[] = Array.isArray(playerData.wonTypes) ? playerData.wonTypes : Object.values(playerData.wonTypes ?? {});
   const pendingBingos: { playerId: string; playerName: string; bingoType: string; points: number }[] =
     Array.isArray(sessionData.pendingBingos) ? sessionData.pendingBingos : Object.values(sessionData.pendingBingos ?? {});
@@ -215,7 +222,8 @@ export async function declareBingo(
 
   console.log('[declareBingo] validMarked:', validMarked);
 
-  const allClosedTypes = Array.from(new Set([...playerWonTypes, ...sessionWonTypes]));
+  // Each player can win each bingo type once; session wonTypes no longer blocks others
+  const allClosedTypes = Array.from(new Set([...playerWonTypes]));
   const result = checkBingo(board, validMarked, allClosedTypes);
   console.log('[declareBingo] result:', result);
   if (!result.type) return { success: false, reason: 'invalid' };
@@ -224,17 +232,21 @@ export async function declareBingo(
 
   const newScore = (playerData.score ?? 0) + result.points;
   const newPlayerWonTypes = [...playerWonTypes, result.type];
-  const newPending = [
-    ...pendingBingos,
-    { playerId, playerName: playerData.name, bingoType: result.type, points: result.points },
-  ];
+  const newStatus = result.type === 'full' ? 'finished' : 'bingo_pending';
 
-  const playerUpdates: Promise<void>[] = [
+  const playerUpdates: Promise<unknown>[] = [
     update(ref(db, `sessions/${code}/players/${playerId}`), {
       bingo: true,
       bingoType: result.type,
       wonTypes: newPlayerWonTypes,
       score: newScore,
+    }),
+    set(push(ref(db, `sessions/${code}/wonTypes`)), result.type),
+    set(push(ref(db, `sessions/${code}/pendingBingos`)), {
+      playerId,
+      playerName: playerData.name,
+      bingoType: result.type,
+      points: result.points,
     }),
   ];
 
@@ -244,15 +256,14 @@ export async function declareBingo(
       const allPlayers = allPlayersSnap.val() as Record<string, { board: unknown; marked: unknown; wonTypes: unknown; score: number; name: string }>;
       for (const [otherId, otherData] of Object.entries(allPlayers)) {
         if (otherId === playerId) continue;
-        const otherBoard = toArray(otherData.board);
-        const otherMarked = toArray(otherData.marked);
         const otherWonTypes: string[] = Array.isArray(otherData.wonTypes)
           ? (otherData.wonTypes as string[])
           : Object.values(otherData.wonTypes ?? {}) as string[];
         if (otherWonTypes.includes('full')) continue;
+        const otherBoard = toArray(otherData.board);
+        const otherMarked = toArray(otherData.marked);
         const otherResult = checkBingo(otherBoard, otherMarked.filter((i) => calledSet.has(i)), otherWonTypes);
         if (otherResult.type === 'full') {
-          newPending.push({ playerId: otherId, playerName: otherData.name, bingoType: 'full', points: otherResult.points });
           playerUpdates.push(
             update(ref(db, `sessions/${code}/players/${otherId}`), {
               bingo: true,
@@ -261,19 +272,21 @@ export async function declareBingo(
               score: (otherData.score ?? 0) + otherResult.points,
             })
           );
+          playerUpdates.push(
+            set(push(ref(db, `sessions/${code}/wonTypes`)), 'full'),
+            set(push(ref(db, `sessions/${code}/pendingBingos`)), {
+              playerId: otherId,
+              playerName: otherData.name,
+              bingoType: 'full',
+              points: otherResult.points,
+            })
+          );
         }
       }
     }
   }
 
-  await Promise.all([
-    ...playerUpdates,
-    update(ref(db, `sessions/${code}`), {
-      wonTypes: [...sessionWonTypes, result.type],
-      pendingBingos: newPending,
-      status: result.type === 'full' ? 'finished' : 'bingo_pending',
-    }),
-  ]);
+  await Promise.all([...playerUpdates, update(ref(db, `sessions/${code}`), { status: newStatus })]);
 
   return { success: true };
 }

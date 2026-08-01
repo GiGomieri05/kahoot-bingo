@@ -4,7 +4,8 @@ import { ref as dbRef, get, onValue } from 'firebase/database';
 import { db } from '../../firebase';
 import { useThemes } from '../../hooks/useThemes';
 import { markItem, unmarkItem, declareBingo } from '../../hooks/useSession';
-import { checkBingo, validateBingo } from '../../utils/validateBingo';
+import { isNumberTheme, NUMBER_THEME } from '../../utils/numberTheme';
+import { checkBingo, validateBingo, FREE_SPACE_INDEX } from '../../utils/validateBingo';
 import Confetti from '../../components/Confetti';
 import { playCorrect, playBingo } from '../../components/SoundEffects';
 import type { Session, Player, ThemeItem } from '../../types';
@@ -27,7 +28,11 @@ export default function BingoBoard() {
 
   const playerId = localStorage.getItem('bingolive_player_id') ?? '';
 
-  const theme = session ? themes.find((t) => t.id === session.themeId) ?? null : null;
+  const theme = session
+    ? (isNumberTheme(session.themeId)
+        ? NUMBER_THEME
+        : themes.find((t) => t.id === session.themeId) ?? null)
+    : null;
   const currentClue: ThemeItem | null =
     theme && session && session.currentClueIndex >= 0
       ? theme.items[session.currentClueIndex] ?? null
@@ -74,6 +79,7 @@ export default function BingoBoard() {
   async function handleCellTap(boardPos: number) {
     if (!code || !player || !theme) return;
     const itemIdx = player.board[boardPos];
+    if (itemIdx < 0) return;
     const alreadyMarked = player.marked.includes(itemIdx);
 
     setCellAnim(boardPos);
@@ -185,8 +191,7 @@ export default function BingoBoard() {
   }
 
   const playerWonTypes = player.wonTypes ?? [];
-  const sessionWonTypes = session?.wonTypes ?? [];
-  const allClosedTypes = Array.from(new Set([...playerWonTypes, ...sessionWonTypes]));
+  const allClosedTypes = Array.from(new Set([...playerWonTypes]));
   const calledSet = new Set(session?.calledItems ?? []);
   const validMarked = player.marked.filter((idx) => calledSet.has(idx));
   const bingoResult = checkBingo(player.board, validMarked, allClosedTypes);
@@ -247,18 +252,40 @@ export default function BingoBoard() {
       {/* Bingo Grid */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
+        gridTemplateColumns: 'repeat(5, 1fr)',
         gap: 8,
         marginBottom: 16,
       }}>
+        {['B', 'I', 'N', 'G', 'O'].map((letter) => (
+          <div
+            key={letter}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#E8E6F0',
+              fontSize: 24,
+              fontWeight: 900,
+              fontFamily: 'Nunito, sans-serif',
+              background: '#1a1f42',
+              border: '2px solid #2A2F52',
+              borderRadius: 14,
+              minHeight: 48,
+            }}
+          >
+            {letter}
+          </div>
+        ))}
         {player.board.map((itemIdx, pos) => {
-          const item = theme.items[itemIdx];
-          const isMarked = player.marked.includes(itemIdx);
+          const isFreeSpace = itemIdx === FREE_SPACE_INDEX;
+          const item = isFreeSpace ? undefined : theme.items[itemIdx];
+          const isMarked = isFreeSpace || player.marked.includes(itemIdx);
           const isAnimating = cellAnim === pos;
           return (
             <button
               key={pos}
               onClick={() => handleCellTap(pos)}
+              disabled={itemIdx < 0}
               style={{
                 background: isMarked
                   ? 'linear-gradient(135deg, #3a6600, #58CC02aa)'
@@ -267,7 +294,7 @@ export default function BingoBoard() {
                 borderRadius: 14,
                 padding: '12px 6px',
                 minHeight: 72,
-                cursor: 'pointer',
+                cursor: itemIdx < 0 ? 'default' : 'pointer',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -279,22 +306,26 @@ export default function BingoBoard() {
                 overflow: 'hidden',
               }}
             >
-              {isMarked && (
+              {isFreeSpace ? (
+                <div style={{ fontSize: 28, lineHeight: 1 }}>⭐</div>
+              ) : isMarked ? (
                 <div style={{ fontSize: 18, lineHeight: 1 }}>✓</div>
+              ) : null}
+              {!isFreeSpace && (
+                <div style={{
+                  color: isMarked ? '#58CC02' : '#E8E6F0',
+                  fontSize: 13,
+                  fontWeight: 800,
+                  textAlign: 'center',
+                  lineHeight: 1.2,
+                  wordBreak: 'break-word',
+                  hyphens: 'auto',
+                  overflowWrap: 'break-word',
+                  fontFamily: 'Nunito, sans-serif',
+                }}>
+                  {item?.word ?? '?'}
+                </div>
               )}
-              <div style={{
-                color: isMarked ? '#58CC02' : '#E8E6F0',
-                fontSize: 13,
-                fontWeight: 800,
-                textAlign: 'center',
-                lineHeight: 1.2,
-                wordBreak: 'break-word',
-                hyphens: 'auto',
-                overflowWrap: 'break-word',
-                fontFamily: 'Nunito, sans-serif',
-              }}>
-                {item?.word ?? '?'}
-              </div>
             </button>
           );
         })}
