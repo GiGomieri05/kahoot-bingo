@@ -191,7 +191,10 @@ export default function BingoBoard() {
   }
 
   const playerWonTypes = player.wonTypes ?? [];
-  const allClosedTypes = Array.from(new Set([...playerWonTypes]));
+  const sessionWonTypes: string[] = Array.isArray(session?.wonTypes)
+    ? session.wonTypes
+    : Object.values(session?.wonTypes ?? {});
+  const allClosedTypes = Array.from(new Set([...playerWonTypes, ...sessionWonTypes]));
   const calledSet = new Set(session?.calledItems ?? []);
   const validMarked = player.marked.filter((idx) => calledSet.has(idx));
   const bingoResult = checkBingo(player.board, validMarked, allClosedTypes);

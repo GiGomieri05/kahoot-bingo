@@ -211,6 +211,9 @@ export async function declareBingo(
   const marked: number[] = toArray(playerData.marked);
   const calledItems: number[] = toArray(sessionData.calledItems);
   const playerWonTypes: string[] = Array.isArray(playerData.wonTypes) ? playerData.wonTypes : Object.values(playerData.wonTypes ?? {});
+  const sessionWonTypes: string[] = Array.isArray(sessionData.wonTypes)
+    ? sessionData.wonTypes
+    : Object.values(sessionData.wonTypes ?? {});
   const pendingBingos: { playerId: string; playerName: string; bingoType: string; points: number }[] =
     Array.isArray(sessionData.pendingBingos) ? sessionData.pendingBingos : Object.values(sessionData.pendingBingos ?? {});
 
@@ -222,8 +225,10 @@ export async function declareBingo(
 
   console.log('[declareBingo] validMarked:', validMarked);
 
-  // Each player can win each bingo type once; session wonTypes no longer blocks others
-  const allClosedTypes = Array.from(new Set([...playerWonTypes]));
+  // A prize type can only be awarded once per game; once it is in session wonTypes, no one else
+  // can claim it. Simultaneous declarations on the same called number are still allowed because
+  // both read the snapshot before the type is added to session wonTypes.
+  const allClosedTypes = Array.from(new Set([...playerWonTypes, ...sessionWonTypes]));
   const result = checkBingo(board, validMarked, allClosedTypes);
   console.log('[declareBingo] result:', result);
   if (!result.type) return { success: false, reason: 'invalid' };
@@ -262,7 +267,8 @@ export async function declareBingo(
         if (otherWonTypes.includes('full')) continue;
         const otherBoard = toArray(otherData.board);
         const otherMarked = toArray(otherData.marked);
-        const otherResult = checkBingo(otherBoard, otherMarked.filter((i) => calledSet.has(i)), otherWonTypes);
+        const otherClosedTypes = Array.from(new Set([...otherWonTypes, ...sessionWonTypes]));
+        const otherResult = checkBingo(otherBoard, otherMarked.filter((i) => calledSet.has(i)), otherClosedTypes);
         if (otherResult.type === 'full') {
           playerUpdates.push(
             update(ref(db, `sessions/${code}/players/${otherId}`), {
