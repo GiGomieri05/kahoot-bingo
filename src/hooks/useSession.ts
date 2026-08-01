@@ -128,6 +128,7 @@ export async function markItem(
   itemIndex: number,
   currentScore: number
 ): Promise<void> {
+  if (itemIndex < 0) return;
   const [markedSnap, calledSnap] = await Promise.all([
     get(ref(db, `sessions/${code}/players/${playerId}/marked`)),
     get(ref(db, `sessions/${code}/calledItems`)),
@@ -149,6 +150,7 @@ export async function unmarkItem(
   itemIndex: number,
   currentScore: number
 ): Promise<void> {
+  if (itemIndex < 0) return;
   const [markedSnap, calledSnap] = await Promise.all([
     get(ref(db, `sessions/${code}/players/${playerId}/marked`)),
     get(ref(db, `sessions/${code}/calledItems`)),

@@ -142,14 +142,35 @@ export default function PlayerResults() {
             </p>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
+              gridTemplateColumns: 'repeat(5, 1fr)',
               gap: 6,
             }}>
+              {['B', 'I', 'N', 'G', 'O'].map((letter) => (
+                <div
+                  key={letter}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#E8E6F0',
+                    fontSize: 18,
+                    fontWeight: 900,
+                    fontFamily: 'Nunito, sans-serif',
+                    background: '#1a1f42',
+                    border: '1px solid #2A2F52',
+                    borderRadius: 10,
+                    minHeight: 40,
+                  }}
+                >
+                  {letter}
+                </div>
+              ))}
               {myPlayer.board.map((itemIdx, pos) => {
-                const item = theme.items[itemIdx];
-                const isMarked = myPlayer.marked.includes(itemIdx);
-                const wasCalled = session?.calledItems?.includes(itemIdx);
-                const isCorrect = isMarked && wasCalled;
+                const isFreeSpace = itemIdx === -1;
+                const item = isFreeSpace ? undefined : theme.items[itemIdx];
+                const isMarked = isFreeSpace || myPlayer.marked.includes(itemIdx);
+                const wasCalled = isFreeSpace || session?.calledItems?.includes(itemIdx);
+                const isCorrect = isFreeSpace || (isMarked && wasCalled);
                 return (
                   <div
                     key={pos}
@@ -172,7 +193,7 @@ export default function PlayerResults() {
                       justifyContent: 'center',
                     }}
                   >
-                    {item?.word ?? '?'}
+                    {isFreeSpace ? '⭐' : item?.word ?? '?'}
                   </div>
                 );
               })}
