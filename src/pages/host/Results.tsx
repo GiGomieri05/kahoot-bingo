@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePlayersListener, useSessionListener, deleteSession } from '../../hooks/useSession';
 import { useThemes } from '../../hooks/useThemes';
+import { isNumberTheme, NUMBER_THEME } from '../../utils/numberTheme';
 import Confetti from '../../components/Confetti';
 import type { Player } from '../../types';
 
@@ -30,14 +31,30 @@ export default function Results() {
   }, []);
 
   const theme = useMemo(
-    () => themes.find((t) => t.id === session?.themeId) ?? null,
-    [themes, session?.themeId]
+    () => {
+      if (!session) return null;
+      if (isNumberTheme(session.themeId)) return NUMBER_THEME;
+      return themes.find((t) => t.id === session.themeId) ?? null;
+    },
+    [themes, session]
   );
   const sorted = useMemo(
     () => [...players].sort((a: Player, b: Player) => b.score - a.score),
     [players]
   );
   const totalClues = session?.calledItems?.length ?? 0;
+
+  const bingoGroups = useMemo(() => {
+    const groups = [
+      { key: 'full', label: 'Cartela Cheia', emoji: '🏆' },
+      { key: 'line', label: 'Cinquina', emoji: '⭐' },
+      { key: 'corners', label: '4 Cantos', emoji: '🔷' },
+    ] as const;
+    return groups.map((g) => ({
+      ...g,
+      winners: players.filter((p) => p.wonTypes?.includes(g.key)),
+    }));
+  }, [players]);
 
   useEffect(() => {
     const timer = setTimeout(() => setRevealed(3), 600);
@@ -196,6 +213,38 @@ export default function Results() {
             ))}
           </div>
         )}
+
+        {/* Bingos Conquistados */}
+        <div className="card" style={{ padding: 24, marginBottom: 32, textAlign: 'left' }}>
+          <p style={{ color: '#8A89A0', fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>
+            Bingos Conquistados
+          </p>
+          {bingoGroups.map((group) => (
+            <div key={group.key} style={{ marginBottom: 14 }}>
+              <div style={{ color: '#E8E6F0', fontWeight: 800, fontSize: 15, marginBottom: 6 }}>
+                {group.emoji} {group.label}
+              </div>
+              {group.winners.length === 0 ? (
+                <p style={{ color: '#8A89A0', fontSize: 13, margin: 0 }}>Nenhum</p>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {group.winners.map((p) => (
+                    <span
+                      key={p.id}
+                      style={{
+                        background: '#1CB0F622', border: '1px solid #1CB0F644',
+                        borderRadius: 20, padding: '4px 12px',
+                        color: '#1CB0F6', fontSize: 13, fontWeight: 700,
+                      }}
+                    >
+                      {p.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
 
         {/* Actions */}
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>

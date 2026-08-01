@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePlayersListener, useSessionListener } from '../../hooks/useSession';
 import { useThemes } from '../../hooks/useThemes';
+import { isNumberTheme, NUMBER_THEME } from '../../utils/numberTheme';
 import Confetti from '../../components/Confetti';
 
 function getPersonalMessage(rank: number, total: number): string {
@@ -28,7 +29,11 @@ export default function PlayerResults() {
 
   const playerId = localStorage.getItem('bingolive_player_id') ?? '';
   const myName = localStorage.getItem('bingolive_player_name') ?? '';
-  const theme = session ? themes.find((t) => t.id === session.themeId) : null;
+  const theme = session
+    ? (isNumberTheme(session.themeId)
+        ? NUMBER_THEME
+        : themes.find((t) => t.id === session.themeId))
+    : null;
 
   const sorted = [...players].sort((a, b) => b.score - a.score);
   const myPlayer = players.find((p) => p.id === playerId);

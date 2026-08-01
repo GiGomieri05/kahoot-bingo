@@ -4,6 +4,7 @@ import { ref as dbRef, get, onValue } from 'firebase/database';
 import { db } from '../../firebase';
 import { useThemes } from '../../hooks/useThemes';
 import { markItem, unmarkItem, declareBingo } from '../../hooks/useSession';
+import { isNumberTheme, NUMBER_THEME } from '../../utils/numberTheme';
 import { checkBingo, validateBingo, FREE_SPACE_INDEX } from '../../utils/validateBingo';
 import Confetti from '../../components/Confetti';
 import { playCorrect, playBingo } from '../../components/SoundEffects';
@@ -27,7 +28,11 @@ export default function BingoBoard() {
 
   const playerId = localStorage.getItem('bingolive_player_id') ?? '';
 
-  const theme = session ? themes.find((t) => t.id === session.themeId) ?? null : null;
+  const theme = session
+    ? (isNumberTheme(session.themeId)
+        ? NUMBER_THEME
+        : themes.find((t) => t.id === session.themeId) ?? null)
+    : null;
   const currentClue: ThemeItem | null =
     theme && session && session.currentClueIndex >= 0
       ? theme.items[session.currentClueIndex] ?? null
@@ -186,8 +191,7 @@ export default function BingoBoard() {
   }
 
   const playerWonTypes = player.wonTypes ?? [];
-  const sessionWonTypes = session?.wonTypes ?? [];
-  const allClosedTypes = Array.from(new Set([...playerWonTypes, ...sessionWonTypes]));
+  const allClosedTypes = Array.from(new Set([...playerWonTypes]));
   const calledSet = new Set(session?.calledItems ?? []);
   const validMarked = player.marked.filter((idx) => calledSet.has(idx));
   const bingoResult = checkBingo(player.board, validMarked, allClosedTypes);
