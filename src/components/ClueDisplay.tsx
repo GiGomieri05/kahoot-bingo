@@ -8,6 +8,17 @@ interface ClueDisplayProps {
   large?: boolean;
 }
 
+function bingoLetterFor(value: string): string | null {
+  const n = Number(value);
+  if (Number.isNaN(n)) return null;
+  if (n >= 1 && n <= 15) return 'B';
+  if (n <= 30) return 'I';
+  if (n <= 45) return 'N';
+  if (n <= 60) return 'G';
+  if (n <= 75) return 'O';
+  return null;
+}
+
 export default function ClueDisplay({ clue, isRevealed, onReveal, onHide, large }: ClueDisplayProps) {
 
   if (!clue) {
@@ -28,6 +39,8 @@ export default function ClueDisplay({ clue, isRevealed, onReveal, onHide, large 
       </div>
     );
   }
+
+  const letter = bingoLetterFor(clue.clue);
 
   function handleReveal() {
     onReveal?.();
@@ -53,6 +66,11 @@ export default function ClueDisplay({ clue, isRevealed, onReveal, onHide, large 
         <div style={{ color: '#8A89A0', fontSize: large ? 16 : 13, fontWeight: 700, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 2 }}>
           CLUE
         </div>
+        {letter && (
+          <div style={{ color: '#FFC800', fontSize: large ? 22 : 14, fontWeight: 900, marginBottom: 4 }}>
+            {letter}
+          </div>
+        )}
         <div
           style={{
             color: '#CE82FF',
