@@ -121,7 +121,30 @@ export default function Home() {
             gap: 10,
           }}
         >
-          🎤 Host a Game
+          🎤 Bingo de Palavras
+        </button>
+
+        <button
+          className="btn-3d"
+          onClick={() => navigate('/host/lobby/numbers')}
+          style={{
+            background: '#FFC800',
+            color: '#0B0D1A',
+            border: 'none',
+            borderRadius: 16,
+            padding: '20px 32px',
+            fontSize: 20,
+            fontWeight: 800,
+            cursor: 'pointer',
+            boxShadow: '0 6px 0 #a88000, 0 0 24px rgba(255,200,0,0.3)',
+            fontFamily: 'Nunito, sans-serif',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+          }}
+        >
+          🔢 Bingo de Números
         </button>
 
         <button
@@ -144,7 +167,7 @@ export default function Home() {
             gap: 10,
           }}
         >
-          🎮 Join a Game
+          🎮 Entrar num Jogo
         </button>
       </div>
 

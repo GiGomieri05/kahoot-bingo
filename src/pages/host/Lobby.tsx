@@ -5,6 +5,7 @@ import { usePlayersListener, createSession, updateSessionStatus } from '../../ho
 import QRCodeDisplay from '../../components/QRCodeDisplay';
 import { playJoin } from '../../components/SoundEffects';
 import ModerationPanel from '../../components/ModerationPanel';
+import { isNumberTheme, NUMBER_THEME } from '../../utils/numberTheme';
 
 export default function Lobby() {
   const { themeId } = useParams<{ themeId: string }>();
@@ -14,13 +15,16 @@ export default function Lobby() {
   const [starting, setStarting] = useState(false);
   const prevCountRef = useRef(0);
 
-  const theme = themes.find((t) => t.id === themeId) ?? null;
+  const theme = isNumberTheme(themeId)
+    ? NUMBER_THEME
+    : themes.find((t) => t.id === themeId) ?? null;
   const { players } = usePlayersListener(sessionCode ?? '');
 
   useEffect(() => {
     if (!themeId) return;
     const hostId = `host-${Date.now()}`;
-    createSession(themeId, hostId).then((code) => {
+    const mode: 'words' | 'numbers' = isNumberTheme(themeId) ? 'numbers' : 'words';
+    createSession(themeId, hostId, mode).then((code) => {
       setSessionCode(code);
       localStorage.setItem('bingolive_host_code', code);
     });

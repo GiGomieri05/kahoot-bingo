@@ -4,6 +4,7 @@ import { useSessionListener, usePlayersListener } from '../../hooks/useSession';
 import { useThemes } from '../../hooks/useThemes';
 import { onValue, ref as dbRef } from 'firebase/database';
 import { db } from '../../firebase';
+import { isNumberTheme, NUMBER_THEME } from '../../utils/numberTheme';
 
 export default function WaitingRoom() {
   const { code } = useParams<{ code: string }>();
@@ -13,7 +14,11 @@ export default function WaitingRoom() {
   const { themes } = useThemes();
   const myName = localStorage.getItem('bingolive_player_name') ?? '';
   const playerId = localStorage.getItem('bingolive_player_id') ?? '';
-  const theme = session ? themes.find((t) => t.id === session.themeId) : null;
+  const theme = session
+    ? (isNumberTheme(session.themeId)
+        ? NUMBER_THEME
+        : themes.find((t) => t.id === session.themeId))
+    : null;
   const sessionWasLoadedRef = useRef(false);
   const playerWasLoadedRef = useRef(false);
   const [kicked, setKicked] = useState(false);

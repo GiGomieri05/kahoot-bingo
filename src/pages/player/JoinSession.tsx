@@ -4,6 +4,7 @@ import { get, ref } from 'firebase/database';
 import { db } from '../../firebase';
 import { useThemes } from '../../hooks/useThemes';
 import { joinSession } from '../../hooks/useSession';
+import { isNumberTheme, NUMBER_THEME } from '../../utils/numberTheme';
 import { containsBadWord } from '../../utils/filterName';
 
 export default function JoinSession() {
@@ -30,7 +31,9 @@ export default function JoinSession() {
       if (!snap.exists()) { triggerError("Session not found. Check the code."); setLoading(false); return; }
       const session = snap.val();
       if (session.status !== 'waiting' && session.status !== 'playing') { triggerError("This session has already ended."); setLoading(false); return; }
-      const theme = themes.find((t) => t.id === session.themeId);
+      const theme = isNumberTheme(session.themeId)
+        ? NUMBER_THEME
+        : themes.find((t) => t.id === session.themeId);
       if (!theme) { triggerError("Theme not loaded. Try again."); setLoading(false); return; }
       const playerId = await joinSession(trimCode, trimName, theme);
       if (!playerId) { triggerError("Failed to join. Try again."); setLoading(false); return; }

@@ -15,6 +15,7 @@ export interface Session {
   id: string;
   code: string;
   themeId: string;
+  mode?: 'words' | 'numbers';
   status: 'waiting' | 'playing' | 'bingo_pending' | 'finished';
   currentClueIndex: number;
   calledItems: number[];
